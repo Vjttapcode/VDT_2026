@@ -34,33 +34,33 @@
 
 ## Tuần A — Backend hoàn chỉnh + CI/CD (22/06–30/06)
 
-### Ngày 1 — 22/06 (T2): auth-service DB + entity + JWT
-- [ ] Viết `V1__init_auth_schema.sql`:
+### ~~Ngày 1 — 22/06 (T2): auth-service DB + entity + JWT~~ ✅ DONE
+- [x] Viết `V1__init_auth_schema.sql`:
   - Bảng `companies` (Công ty)
   - Bảng `departments` (Trung tâm) có `company_id` FK → `companies`
   - Bảng `users` có **4 roles**: `ADMIN`, `MANAGER_COMPANY`, `MANAGER_CENTER`, `USER`
   - `users.department_id` nullable (null với MANAGER_COMPANY và ADMIN)
   - `users.company_id` nullable (null với USER, MANAGER_CENTER, ADMIN)
   - Seed: 1 company, 3 departments, 1 ADMIN, 1 MANAGER_COMPANY, 1 MANAGER_CENTER
-- [ ] Cấu hình Flyway + JPA + JWT trong `application.yaml` (schema `auth_schema`, ddl-auto=validate)
-- [ ] Tạo entity `Company`, `Department`, `User` + enum `Role(ADMIN/MANAGER_COMPANY/MANAGER_CENTER/USER)`
-- [ ] Tạo `CompanyRepository`, `DepartmentRepository`, `UserRepository`
-- [ ] Implement `JwtUtil` — JWT claims bao gồm: `userId`, `role`, `departmentId` (nullable), `companyId` (nullable)
-- [ ] `docker-compose up postgres` → verify Flyway chạy, bảng + seed data có
+- [x] Cấu hình Flyway + JPA + JWT trong `application.yaml` (schema `auth_schema`, ddl-auto=validate)
+- [x] Tạo entity `Company`, `Department`, `User` + enum `Role(ADMIN/MANAGER_COMPANY/MANAGER_CENTER/USER)`
+- [x] Tạo `CompanyRepository`, `DepartmentRepository`, `UserRepository`
+- [x] Implement `JwtUtil` — JWT claims bao gồm: `userId`, `role`, `departmentId` (nullable), `companyId` (nullable)
+- [x] `docker-compose up postgres` → verify Flyway chạy, bảng + seed data có
 
-### Ngày 2 — 23/06 (T3): auth-service API + security
-- [ ] `JwtFilter` (OncePerRequestFilter) + `SecurityConfig` (permit `/login`, còn lại authenticated)
-- [ ] DTO: `LoginRequest`, `LoginResponse` (có thêm `companyId`), `RegisterRequest`, `UserDto`
-- [ ] `AuthController`: `POST /login`, `POST /register` (ADMIN)
-- [ ] `UserController`: `GET /users`, `PUT /users/{id}` (ADMIN)
-- [ ] `DepartmentController`: `GET/POST /departments` (Trung tâm)
-- [ ] `CompanyController`: `GET/POST /companies` (ADMIN)
-- [ ] Internal endpoints cho scheduler-service:
+### ~~Ngày 2 — 23/06 (T3): auth-service API + security~~ ✅ DONE
+- [x] `JwtFilter` (OncePerRequestFilter) + `SecurityConfig` (permit `/login`, còn lại authenticated)
+- [x] DTO: `LoginRequest`, `LoginResponse` (có thêm `companyId`), `RegisterRequest`, `UserDto`
+- [x] `AuthController`: `POST /login`, `POST /register` (ADMIN)
+- [x] `UserController`: `GET /users`, `PUT /users/{id}` (ADMIN)
+- [x] `DepartmentController`: `GET/POST /departments` (Trung tâm)
+- [x] `CompanyController`: `GET/POST /companies` (ADMIN)
+- [x] Internal endpoints cho notification-service:
   - `GET /internal/users/{id}`
   - `GET /internal/manager/center/{deptId}` → tìm MANAGER_CENTER của Trung tâm đó
   - `GET /internal/manager/company/{companyId}` → tìm MANAGER_COMPANY của Công ty đó
   - `GET /internal/admin` → lấy email ADMIN
-- [ ] Test Postman: login → decode jwt.io → verify có `userId`, `role`, `departmentId` (nullable), `companyId` (nullable)
+- [x] Test Postman: login → decode jwt.io → verify có `userId`, `role`, `departmentId` (nullable), `companyId` (nullable)
 
 ### Ngày 3 — 24/06 (T4): auth-service dockerize + CI/CD setup
 - [ ] Viết `Dockerfile` multi-stage cho auth-service + `.dockerignore`
