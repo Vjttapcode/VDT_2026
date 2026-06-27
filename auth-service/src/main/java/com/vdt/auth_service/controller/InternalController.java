@@ -1,5 +1,15 @@
 package com.vdt.auth_service.controller;
 
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.vdt.auth_service.dto.InternalUserDto;
+import com.vdt.auth_service.entity.Role;
+import com.vdt.auth_service.exception.NotFoundException;
+import com.vdt.auth_service.repository.UserRepository;
+
 @RestController
 @RequestMapping("/internal")
 public class InternalController {

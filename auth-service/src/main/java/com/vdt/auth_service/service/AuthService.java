@@ -1,9 +1,18 @@
 package com.vdt.auth_service.service;
 
+import java.time.LocalDateTime;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
+import com.vdt.auth_service.dto.LoginRequest;
+import com.vdt.auth_service.dto.LoginResponse;
+import com.vdt.auth_service.dto.RegisterRequest;
+import com.vdt.auth_service.dto.UserDto;
+import com.vdt.auth_service.entity.Role;
+import com.vdt.auth_service.entity.User;
+import com.vdt.auth_service.exception.BusinessException;
 import com.vdt.auth_service.repository.UserRepository;
+import com.vdt.auth_service.security.JwtUtil;
 
 @Service
 public class AuthService {
@@ -67,6 +76,5 @@ public class AuthService {
         };
         if(!ok) throw new BusinessException(
                 "departmentId/companyId không khớp với role " + role);
-        )
     }
 }
