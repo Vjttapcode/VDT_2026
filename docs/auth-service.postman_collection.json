@@ -1,0 +1,184 @@
+{
+  "info": {
+    "name": "VDT - auth-service (Ngày 2)",
+    "description": "Bộ test auth-service: login/register, user/department/company management, internal endpoints.\n\nCách dùng:\n1. Chạy auth-service (port 8081) hoặc qua Nginx (port 80, prefix /api/auth).\n2. Chỉnh biến `baseUrl` nếu cần.\n3. Gọi `Login (admin)` trước — token tự lưu vào biến `token`, các request ADMIN dùng lại.\n\nTài khoản seed (password đều là `password`):\n- admin@vdt.com           (ADMIN)\n- manager.company@vdt.com  (MANAGER_COMPANY, company 1)\n- manager.center@vdt.com   (MANAGER_CENTER, department 1)",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://localhost:8081" },
+    { "key": "token", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Auth",
+      "item": [
+        {
+          "name": "Login (admin)",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "type": "text/javascript",
+                "exec": [
+                  "const res = pm.response.json();",
+                  "pm.test('status 200', () => pm.response.to.have.status(200));",
+                  "pm.test('co token', () => pm.expect(res.token).to.be.a('string'));",
+                  "pm.collectionVariables.set('token', res.token);",
+                  "console.log('role=' + res.role + ' deptId=' + res.departmentId + ' companyId=' + res.companyId);"
+                ]
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@vdt.com\",\n  \"password\": \"password\"\n}" },
+            "url": { "raw": "{{baseUrl}}/login", "host": [ "{{baseUrl}}" ], "path": [ "login" ] }
+          }
+        },
+        {
+          "name": "Login (manager.center)",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"manager.center@vdt.com\",\n  \"password\": \"password\"\n}" },
+            "url": { "raw": "{{baseUrl}}/login", "host": [ "{{baseUrl}}" ], "path": [ "login" ] }
+          }
+        },
+        {
+          "name": "Login (sai mat khau) -> 400",
+          "request": {
+            "method": "POST",
+            "header": [ { "key": "Content-Type", "value": "application/json" } ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"admin@vdt.com\",\n  \"password\": \"wrong\"\n}" },
+            "url": { "raw": "{{baseUrl}}/login", "host": [ "{{baseUrl}}" ], "path": [ "login" ] }
+          }
+        },
+        {
+          "name": "Register USER (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"email\": \"nv1@vdt.com\",\n  \"password\": \"password\",\n  \"fullName\": \"Nhan vien 1\",\n  \"role\": \"USER\",\n  \"departmentId\": 1,\n  \"companyId\": null\n}" },
+            "url": { "raw": "{{baseUrl}}/register", "host": [ "{{baseUrl}}" ], "path": [ "register" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Users (ADMIN)",
+      "item": [
+        {
+          "name": "GET /users",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/users", "host": [ "{{baseUrl}}" ], "path": [ "users" ] }
+          }
+        },
+        {
+          "name": "PUT /users/{id}",
+          "request": {
+            "method": "PUT",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"fullName\": \"Ten moi\",\n  \"isActive\": true\n}" },
+            "url": { "raw": "{{baseUrl}}/users/2", "host": [ "{{baseUrl}}" ], "path": [ "users", "2" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Departments",
+      "item": [
+        {
+          "name": "GET /departments",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/departments", "host": [ "{{baseUrl}}" ], "path": [ "departments" ] }
+          }
+        },
+        {
+          "name": "POST /departments (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Trung tam moi\",\n  \"code\": \"TT-NEW\",\n  \"companyId\": 1\n}" },
+            "url": { "raw": "{{baseUrl}}/departments", "host": [ "{{baseUrl}}" ], "path": [ "departments" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Companies (ADMIN)",
+      "item": [
+        {
+          "name": "GET /companies",
+          "request": {
+            "method": "GET",
+            "header": [ { "key": "Authorization", "value": "Bearer {{token}}" } ],
+            "url": { "raw": "{{baseUrl}}/companies", "host": [ "{{baseUrl}}" ], "path": [ "companies" ] }
+          }
+        },
+        {
+          "name": "POST /companies (ADMIN)",
+          "request": {
+            "method": "POST",
+            "header": [
+              { "key": "Content-Type", "value": "application/json" },
+              { "key": "Authorization", "value": "Bearer {{token}}" }
+            ],
+            "body": { "mode": "raw", "raw": "{\n  \"name\": \"Cong ty B\",\n  \"code\": \"CTB\"\n}" },
+            "url": { "raw": "{{baseUrl}}/companies", "host": [ "{{baseUrl}}" ], "path": [ "companies" ] }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Internal (service-to-service, khong can token)",
+      "item": [
+        {
+          "name": "GET /internal/users/{id}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/internal/users/1", "host": [ "{{baseUrl}}" ], "path": [ "internal", "users", "1" ] }
+          }
+        },
+        {
+          "name": "GET /internal/manager/center/{deptId}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/internal/manager/center/1", "host": [ "{{baseUrl}}" ], "path": [ "internal", "manager", "center", "1" ] }
+          }
+        },
+        {
+          "name": "GET /internal/manager/company/{companyId}",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/internal/manager/company/1", "host": [ "{{baseUrl}}" ], "path": [ "internal", "manager", "company", "1" ] }
+          }
+        },
+        {
+          "name": "GET /internal/admin",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": { "raw": "{{baseUrl}}/internal/admin", "host": [ "{{baseUrl}}" ], "path": [ "internal", "admin" ] }
+          }
+        }
+      ]
+    }
+  ]
+}
