@@ -91,7 +91,7 @@ services:
     ports:
       - "80:80"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./Nginx/nginx.conf:/etc/nginx/nginx.conf:ro
       - uploads:/app/uploads:ro # để Nginx serve file đính kèm
     depends_on:
       - auth-service
