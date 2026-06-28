@@ -1,3 +1,39 @@
 spring:
   application:
     name: document-service
+
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vdt_db}
+    username: ${SPRING_DATASOURCE_USERNAME:vdt}
+    password: ${SPRING_DATASOURCE_PASSWORD:vdt123}
+    driver-class-name: org.postgresql.Driver
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: document_schema
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+    show-sql: true
+
+  flyway:
+    enabled: true
+    schemas: document_schema
+    default-schema: document_schema
+    create-schemas: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+
+server:
+  port: 8082
+
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-here-minimum-32-chars}
+  expiration: ${JWT_EXPIRATION:86400000}
+
+logging:
+  level:
+    org.flywaydb: INFO
