@@ -1,0 +1,16 @@
+services:
+  postgres:
+    ports: !reset [] # gỡ map 5432 ra host (chỉ nội bộ container)
+
+  # tuỳ chọn bảo mật: gỡ luôn các port service, chỉ để Nginx (80) public
+  auth-service:
+    ports: !reset []
+  document-service:
+    ports: !reset []
+  notification-service:
+    ports: !reset []
+  scheduler-service:
+    ports: !reset []
+  mailhog:
+    ports:
+      - "8025:8025" # giữ web UI mailhog nếu muốn xem mail
