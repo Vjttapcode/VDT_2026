@@ -7,16 +7,35 @@ import com.vdt.document_service.exception.ForbiddenException;
 import com.vdt.document_service.exception.NotFoundException;
 import com.vdt.document_service.repository.DocumentRepository;
 import com.vdt.document_service.util.SecurityUtil;
+import com.vdt.document_service.exception.BusinessException;
+
 import java.util.List;
+import java.util.LinkedHashMap;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.core.JsonProcessingException;
+import com.vdt.document_service.repository.ApprovalRequestRepository;
+import com.vdt.document_service.repository.NotificationOutboxRepository;
 
 @Service
 public class DocumentService {
 
     private final DocumentRepository repo;
+    private final ApprovalRequestRepository approvalRepo;
+    private final NotificationOutboxRepository outboxRepo;
+    private final ObjectMapper objectMapper;
+    
 
-    public DocumentService(DocumentRepository repo) { this.repo = repo; }
+    public DocumentService(DocumentRepository repo, ApprovalRequestRepository approvalRepo, NotificationOutboxRepository outboxRepo, ObjectMapper objectMapper) { 
+        this.repo = repo;
+        this.approvalRepo = approvalRepo;
+        this.outboxRepo = outboxRepo;
+        this.objectMapper = objectMapper; 
+    }
 
     /** List filter theo role của người gọi. */
     public List<DocumentResponse> list() {
@@ -75,6 +94,42 @@ public class DocumentService {
         repo.delete(doc);
     }
 
+    @Transactional
+    public DocumentResponse submit(Long id) {
+        Document doc = findOrThrow(id);
+        assertOwner(doc);
+        if (doc.getStatus() != DocumentStatus.DRAFT && doc.getStatus() != DocumentStatus.REJECTED)
+            throw new BusinessException("Chỉ nộp được văn bản DRAFT/REJECTED");
+        
+        doc.setStatus(DocumentStatus.PENDING);
+        repo.save(doc);
+        saveLog(doc.getId(), "SUBMIT", SecurityUtil.currentUserId(), null, null);
+        enqueue(doc, "APPROVAL_REQUEST", "MANAGER_CENTER", null);
+        return DocumentResponse.from(doc);
+    }
+
+    @Transactional
+    public DocumentResponse approve(Long id){
+        Document doc = findOrThrow(id);
+        assertCanApprove(doc);
+        doc.setStatus(DocumentStatus.ACTIVE);
+        repo.save(doc);
+        saveLog(doc.getId(), "APPROVE", null, SecurityUtil.currentUserId(), null);
+        enqueue(doc, "APPROVED", "USER", null);
+        return DocumentResponse.from(doc);
+    }
+
+    @Transactional
+    public DocumentResponse reject(Long id, String reason) {
+        Document doc = findOrThrow(id);
+        assertCanApprove(doc);
+        doc.setStatus(DocumentStatus.REJECTED);
+        repo.save(doc);
+        saveLog(doc.getId(), "REJECT", null, SecurityUtil.currentUserId(), reason);
+        enqueue(doc, "REJECTED", "USER", reason);
+        return DocumentResponse.from(doc);
+    }
+
     // ---- helpers --------------------------------------------------
     private Document findOrThrow(Long id) {
         return repo.findById(id)
@@ -96,6 +151,50 @@ public class DocumentService {
             default                -> SecurityUtil.currentUserId().equals(doc.getOwnerId());
         };
         if (!ok) throw new ForbiddenException("Không có quyền xem văn bản này");
+    }
+
+    private void assertCanApprove(Document doc){
+        if(doc.getStatus() != DocumentStatus.PENDING)
+            throw new BusinessException("Chỉ duyệt/từ chối được văn bản trạng thái PENDING");
+        if(doc.getOwnerId().equals(SecurityUtil.currentUserId()))
+            throw new ForbiddenException("Không được tự duyệt văn bản của mình");
+        String role = SecurityUtil.currentRole();
+        boolean ok = switch(doc.getLevel()){
+            case CENTER -> !"USER".equals(role) && (role.equals("ADMIN")) || role.equals("MANAGER_COMPANY") || doc.getDepartmentId().equals(SecurityUtil.currentDepartmentId());
+            case COMPANY -> role.equals("ADMIN") || role.equals("MANAGER_COMPANY") && doc.getCompanyId().equals(SecurityUtil.currentCompanyId());
+            case GROUP -> role.equals("ADMIN");
+        };
+        if(!ok) throw new ForbiddenException("Không đủ quyền duyệt văn bản cấp " + doc.getLevel());
+    }
+
+    private void saveLog(Long docId, String action, Long requesterId, Long reviewerId, String comment) {
+        approvalRepo.save(ApprovalRequest.builder()
+                .documentId(docId).action(action)
+                .requesterId(requesterId).reviewerId(reviewerId)
+                .comment(comment).build());
+    }
+
+    private void enqueue(Document doc, String eventType, String recipientRole, String reason){
+        outboxRepo.save(NotificationOutbox.builder()
+                .eventType(eventType)
+                .documentId(doc.getId())
+                .payload(buildPayload(doc, recipientRole, reason))
+                .build());
+    }
+
+    private String buildPayload(Document doc, String recipientRole, String reason){
+        try{
+            Map<String, Object> p = new LinkedHashMap<>();
+            p.put("docId", doc.getId());
+            p.put("docTitle", doc.getTitle());
+            p.put("level", doc.getLevel().name());
+            p.put("expiryDate", doc.getExpiryDate().toString());
+            p.put("recipientRole", recipientRole);
+            if(reason!=null) p.put("reason", reason);
+            return objectMapper.writeValueAsString(p);
+        }catch (JsonProcessingException e) {
+            throw new BusinessException("Không tạo được payload outbox");
+        }
     }
 
     private Long nullIfSentinel(Long v) { return (v == null || v == -1L) ? null : v; }

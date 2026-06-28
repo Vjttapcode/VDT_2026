@@ -3,6 +3,7 @@ package com.vdt.document_service.controller;
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
 import com.vdt.document_service.service.DocumentService;
+import com.vdt.document_service.dto.RejectRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -31,6 +32,17 @@ public class DocumentController {
     @PutMapping("/{id}")
     public DocumentResponse update(@PathVariable Long id, @Valid @RequestBody DocumentRequest req) {
         return service.update(id, req);
+    }
+
+    @PostMapping("/{id}/submit")
+    public DocumentResponse submit(@PathVariable Long id) { return service.submit(id); }
+
+    @PostMapping("/{id}/approve")
+    public DocumentResponse approve(@PathVariable Long id) { return service.approve(id); }
+
+    @PostMapping("/{id}/reject")
+    public DocumentResponse reject(@PathVariable Long id, @RequestBody RejectRequest body) {
+        return service.reject(id, body.reason());
     }
 
     @DeleteMapping("/{id}")

@@ -44,6 +44,10 @@ public class NotificationOutbox {
     @Column(name="retry_count", nullable=false)
     private int retryCount = 0;
 
+    @Builder.Default
+    @Column(nullable=false)
+    private String status = "PENDING";
+
     @Column(name="created_at", insertable=false, updatable=false)
     private LocalDateTime createdAt;
 
