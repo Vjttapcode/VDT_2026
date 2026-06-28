@@ -62,30 +62,30 @@
   - `GET /internal/admin` → lấy email ADMIN
 - [x] Test Postman: login → decode jwt.io → verify có `userId`, `role`, `departmentId` (nullable), `companyId` (nullable)
 
-### Ngày 3 — 24/06 (T4): auth-service dockerize + CI/CD setup
-- [ ] Viết `Dockerfile` multi-stage cho auth-service + `.dockerignore`
-- [ ] `docker-compose up --build auth-service` chạy ổn, login qua Nginx `http://localhost/api/auth/login`
-- [ ] Tạo `.github/workflows/ci.yml` — pipeline GitHub Actions — Task 1.CI
+### ~~Ngày 3 — 24/06 (T4): auth-service dockerize + CI/CD setup~~ ✅ DONE
+- [x] Viết `Dockerfile` multi-stage cho auth-service + `.dockerignore`
+- [x] `docker-compose up --build auth-service` chạy ổn, login qua Nginx `http://localhost/api/auth/login`
+- [x] Tạo `.github/workflows/ci.yml` — pipeline GitHub Actions — Task 1.CI
   - **Job 1 `build-test`:** checkout → Java 21 → `mvn package -DskipTests -B` cho cả 4 service
   - **Job 2 `docker-build`:** `docker compose build` (verify Dockerfile syntax + layer cache)
-- [ ] Push lên GitHub → xem tab Actions → 2 jobs green ✅
-- [ ] Thêm CI status badge vào `README.md`
-- [ ] **Verify:** CI green; auth-service accessible tại `http://localhost/api/auth/login`
+- [x] Push lên GitHub → xem tab Actions → 2 jobs green ✅
+- [x] Thêm CI status badge vào `README.md`
+- [x] **Verify:** CI green; auth-service accessible tại `http://localhost/api/auth/login`
 
-### Ngày 4 — 25/06 (T5): document-service DB + CRUD
-- [ ] `V1__init_document_schema.sql`:
+### ~~Ngày 4 — 25/06 (T5): document-service DB + CRUD~~ ✅ DONE
+- [x] `V1__init_document_schema.sql`:
   - Bảng `documents` với `type` (4 loại), `level` (`CENTER`/`COMPANY`/`GROUP`), `company_id`, `renewal_count`
   - Bảng `approval_requests`
   - Index trên `expiry_date`, `status`, `owner_id`, `department_id`, `company_id`, `level`
-- [ ] Cấu hình Flyway/JPA schema `document_schema` + `application.yaml`
-- [ ] Entity `Document`, `ApprovalRequest` + enum `DocumentStatus`, `DocumentType`, `DocumentLevel`
-- [ ] `JwtFilter` — parse thêm `companyId` từ JWT claims — Task 2.2
-- [ ] CRUD `POST/GET/GET{id}/PUT/DELETE /documents` với filter theo role:
+- [x] Cấu hình Flyway/JPA schema `document_schema` + `application.yaml`
+- [x] Entity `Document`, `ApprovalRequest` + enum `DocumentStatus`, `DocumentType`, `DocumentLevel`
+- [x] `JwtFilter` — parse thêm `companyId` từ JWT claims — Task 2.2
+- [x] CRUD `POST/GET/GET{id}/PUT/DELETE /documents` với filter theo role:
   - `USER`: `owner_id = userId`
   - `MANAGER_CENTER`: `department_id = departmentId`
   - `MANAGER_COMPANY`: `company_id = companyId` (join qua departments hoặc lưu trực tiếp)
   - `ADMIN`: no filter
-- [ ] **Verify:** tạo văn bản với các level khác nhau, kiểm tra filter đúng role
+- [x] **Verify:** tạo văn bản với các level khác nhau, kiểm tra filter đúng role
 
 ### Ngày 5 — 26/06 (T6): document-service approval workflow + upload + outbox
 - [ ] `DocumentService`: submit / approve / reject / renew — Task 2.3
