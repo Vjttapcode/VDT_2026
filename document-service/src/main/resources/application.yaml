@@ -46,3 +46,7 @@ logging:
 notification:
   service:
     url: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
+
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8081}

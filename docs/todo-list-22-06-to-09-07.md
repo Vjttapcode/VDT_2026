@@ -87,20 +87,20 @@
   - `ADMIN`: no filter
 - [x] **Verify:** tạo văn bản với các level khác nhau, kiểm tra filter đúng role
 
-### Ngày 5 — 26/06 (T6): document-service approval workflow + upload + outbox
-- [ ] `DocumentService`: submit / approve / reject / renew — Task 2.3
-  - **Approve gate theo level:** CENTER→MGR_CENTER+; COMPANY→MGR_COMPANY+; GROUP→ADMIN only
+### ~~Ngày 5 — 26/06 (T6): document-service approval workflow + upload + outbox~~ ✅ DONE
+- [x] `DocumentService`: submit / approve / reject / renew — Task 2.3
+  - **Approve gate theo level:** CENTER→MGR_CENTER+; COMPANY→MGR_COMPANY+; GROUP→ADMIN only (kèm scope: cùng dept/company)
   - **Self-approval:** `reviewerId == doc.ownerId` → ForbiddenException (mọi role)
   - Mỗi method đánh `@Transactional`, viết `notification_outbox` trong cùng transaction
-  - **`renew()`**: WARNING/EXPIRED → ACTIVE, `renewal_count++`, ghi log `RENEW`
-- [ ] Endpoint `POST /documents/{id}/renew` (body: `{newExpiryDate}`) — Task 2.3
-- [ ] Lưu `approval_requests` log mỗi hành động (SUBMIT / APPROVE / REJECT / RENEW)
-- [ ] Entity `NotificationOutbox` + `NotificationOutboxRepository`
-- [ ] `OutboxRelayJob` — `@Scheduled(fixedDelay=10_000)` gọi `POST /internal/emails` sang notification-service — Task 2.3b
-- [ ] **Verify:** approve → `notification_outbox` có entry PENDING → relay gửi → SENT; tắt notification-service → approve vẫn thành công, entry tồn tại trong DB chờ
-- [ ] `POST /documents/{id}/upload` validate PDF/Word, lưu vào volume `/app/uploads` — Task 2.4
-- [ ] `GlobalExceptionHandler` (BusinessException, Forbidden, NotFound) — Task 3.4 (làm sớm)
-- [ ] **Verify:** Submit→PENDING, Approve→ACTIVE, Reject→REJECTED, Renew→ACTIVE; upload trả file_path
+  - **`renew()`**: WARNING/EXPIRED/ACTIVE → ACTIVE, `renewal_count++`, ghi log `RENEW`
+- [x] Endpoint `POST /documents/{id}/renew` (body: `{newExpiryDate}`, validate `@Future`) — Task 2.3
+- [x] Lưu `approval_requests` log mỗi hành động (SUBMIT / APPROVE / REJECT / RENEW)
+- [x] Entity `NotificationOutbox` + `NotificationOutboxRepository` (+ migration V2, payload JSONB qua `@JdbcTypeCode`)
+- [x] `OutboxRelayJob` — `@Scheduled(fixedDelay=10_000)` gọi `POST /internal/emails` sang notification-service (RestTemplate + `@EnableScheduling`) — Task 2.3b
+- [x] **Verify:** approve → `notification_outbox` có entry PENDING → relay gửi → SENT; tắt notification-service → approve vẫn thành công, entry tồn tại trong DB chờ → retry 3 lần → FAILED ✓ (test thực tế)
+- [x] `POST /documents/{id}/upload` validate PDF/Word, lưu vào volume `/app/uploads` (`file_path=/uploads/...` khớp nginx, multipart 10MB) — Task 2.4
+- [x] `GlobalExceptionHandler` (BusinessException, Forbidden, NotFound) — Task 3.4 (đã làm từ Ngày 4)
+- [x] **Verify:** Submit→PENDING, Approve→ACTIVE, Reject→REJECTED, Renew→ACTIVE; upload trả file_path — E2E test PASSED (create→submit→approve→renew→upload + negative cases)
 
 ### Ngày 6 — 27/06 (T7): document-service internal API + dockerize
 - [ ] `RestTemplate`/Feign client gọi auth-service `/internal/users/{id}`, lấy owner/manager/admin email
