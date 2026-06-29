@@ -9,6 +9,7 @@ import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 
 @RestController
 @RequestMapping("/documents")
@@ -49,6 +50,11 @@ public class DocumentController {
     @PostMapping("/{id}/renew")
     public DocumentResponse renew(@PathVariable Long id, @Valid @RequestBody RenewRequest body) {
         return service.renew(id, body.newExpiryDate());
+    }
+
+    @PostMapping("/{id}/upload")
+    public DocumentResponse upload(@PathVariable Long id, @RequestParam("file") MultipartFile file) {
+        return service.uploadFile(id, file);
     }
 
     @DeleteMapping("/{id}")

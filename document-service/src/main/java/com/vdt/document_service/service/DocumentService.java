@@ -1,27 +1,34 @@
 package com.vdt.document_service.service;
 
 import java.time.LocalDate;
-
-import com.vdt.document_service.dto.DocumentRequest;
-import com.vdt.document_service.dto.DocumentResponse;
-import com.vdt.document_service.entity.*;
-import com.vdt.document_service.exception.ForbiddenException;
-import com.vdt.document_service.exception.NotFoundException;
-import com.vdt.document_service.repository.DocumentRepository;
-import com.vdt.document_service.util.SecurityUtil;
-import com.vdt.document_service.exception.BusinessException;
-
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
+import java.util.Set;
+import java.io.IOException;
+import java.nio.file.*;
+import java.util.UUID;
 
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.web.multipart.MultipartFile;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.core.JsonProcessingException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vdt.document_service.dto.DocumentRequest;
+import com.vdt.document_service.dto.DocumentResponse;
+import com.vdt.document_service.entity.ApprovalRequest;
+import com.vdt.document_service.entity.Document;
+import com.vdt.document_service.entity.DocumentStatus;
+import com.vdt.document_service.entity.NotificationOutbox;
+import com.vdt.document_service.exception.BusinessException;
+import com.vdt.document_service.exception.ForbiddenException;
+import com.vdt.document_service.exception.NotFoundException;
 import com.vdt.document_service.repository.ApprovalRequestRepository;
+import com.vdt.document_service.repository.DocumentRepository;
 import com.vdt.document_service.repository.NotificationOutboxRepository;
+import com.vdt.document_service.util.SecurityUtil;
 
 @Service
 public class DocumentService {
@@ -30,13 +37,22 @@ public class DocumentService {
     private final ApprovalRequestRepository approvalRepo;
     private final NotificationOutboxRepository outboxRepo;
     private final ObjectMapper objectMapper;
-    
+    private static final Set<String> ALLOWED_TYPES = Set.of(
+        "application/pdf",
+        "application/msword",
+        "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+    );
 
-    public DocumentService(DocumentRepository repo, ApprovalRequestRepository approvalRepo, NotificationOutboxRepository outboxRepo, ObjectMapper objectMapper) { 
+    private final String uploadDir;
+
+    public DocumentService(DocumentRepository repo, ApprovalRequestRepository approvalRepo,
+        NotificationOutboxRepository outboxRepo, ObjectMapper objectMapper,
+        @Value("${app.upload-dir:uploads}") String uploadDir) {
         this.repo = repo;
         this.approvalRepo = approvalRepo;
         this.outboxRepo = outboxRepo;
-        this.objectMapper = objectMapper; 
+        this.objectMapper = objectMapper;
+        this.uploadDir = uploadDir;
     }
 
     /** List filter theo role của người gọi. */
@@ -149,6 +165,24 @@ public class DocumentService {
         saveLog(doc.getId(), "RENEW", SecurityUtil.currentUserId(), null,
                 "Gia hạn lần " + doc.getRenewalCount() + " đến " + newExpiryDate);
         return DocumentResponse.from(doc);
+    }
+
+    @Transactional
+    public DocumentResponse uploadFile(Long id, MultipartFile file) {
+        Document doc = findOrThrow(id);
+        assertOwner(doc);
+        if(file == null || file.isEmpty() || !ALLOWED_TYPES.contains(file.getContentType()))
+            throw new BusinessException("Chỉ chấp nhận file định dạng PDF hoặc WORD (.doc/.docx)");
+        try {
+            Files.createDirectories(Paths.get(uploadDir));
+            String original = Paths.get(file.getOriginalFilename() == null ? "file" : file.getOriginalFilename()).getFileName().toString();
+            String filename = UUID.randomUUID() +  "_" + original;
+            Files.copy(file.getInputStream(), Paths.get(uploadDir, filename), StandardCopyOption.REPLACE_EXISTING);
+            doc.setFilePath("/upload/" + filename);
+            return DocumentResponse.from(repo.save(doc));
+        } catch (IOException e){
+            throw new BusinessException("Lưu file thất bại: " + e.getMessage());
+        }
     }
 
     // ---- helpers --------------------------------------------------
