@@ -4,6 +4,7 @@ import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
 import com.vdt.document_service.service.DocumentService;
 import com.vdt.document_service.dto.RejectRequest;
+import com.vdt.document_service.dto.RenewRequest;
 import jakarta.validation.Valid;
 import java.util.List;
 import org.springframework.http.HttpStatus;
@@ -43,6 +44,11 @@ public class DocumentController {
     @PostMapping("/{id}/reject")
     public DocumentResponse reject(@PathVariable Long id, @RequestBody RejectRequest body) {
         return service.reject(id, body.reason());
+    }
+
+    @PostMapping("/{id}/renew")
+    public DocumentResponse renew(@PathVariable Long id, @Valid @RequestBody RenewRequest body) {
+        return service.renew(id, body.newExpiryDate());
     }
 
     @DeleteMapping("/{id}")

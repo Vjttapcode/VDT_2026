@@ -1,5 +1,7 @@
 package com.vdt.document_service.service;
 
+import java.time.LocalDate;
+
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
 import com.vdt.document_service.entity.*;
@@ -130,6 +132,25 @@ public class DocumentService {
         return DocumentResponse.from(doc);
     }
 
+    @Transactional
+    public DocumentResponse renew(Long id, LocalDate newExpiryDate) {
+        Document doc = findOrThrow(id);
+        if (newExpiryDate.isBefore(LocalDate.now()))
+            throw new BusinessException("Ngày gia hạn phải sau hôm nay");
+        if (doc.getStatus() != DocumentStatus.WARNING && doc.getStatus() != DocumentStatus.EXPIRED && doc.getStatus() != DocumentStatus.ACTIVE)
+            throw new BusinessException("Không gia hạn được văn bản ở trạng thái " + doc.getStatus());
+        if (!canRenew(doc))
+            throw new ForbiddenException("Không đủ quyền gia hạn văn bản này");
+
+        doc.setExpiryDate(newExpiryDate);
+        doc.setStatus(DocumentStatus.ACTIVE);
+        doc.setRenewalCount(doc.getRenewalCount() + 1);
+        repo.save(doc);
+        saveLog(doc.getId(), "RENEW", SecurityUtil.currentUserId(), null,
+                "Gia hạn lần " + doc.getRenewalCount() + " đến " + newExpiryDate);
+        return DocumentResponse.from(doc);
+    }
+
     // ---- helpers --------------------------------------------------
     private Document findOrThrow(Long id) {
         return repo.findById(id)
@@ -160,9 +181,12 @@ public class DocumentService {
             throw new ForbiddenException("Không được tự duyệt văn bản của mình");
         String role = SecurityUtil.currentRole();
         boolean ok = switch(doc.getLevel()){
-            case CENTER -> !"USER".equals(role) && (role.equals("ADMIN")) || role.equals("MANAGER_COMPANY") || doc.getDepartmentId().equals(SecurityUtil.currentDepartmentId());
-            case COMPANY -> role.equals("ADMIN") || role.equals("MANAGER_COMPANY") && doc.getCompanyId().equals(SecurityUtil.currentCompanyId());
-            case GROUP -> role.equals("ADMIN");
+            case CENTER  -> role.equals("ADMIN")
+                    || (role.equals("MANAGER_COMPANY") && SecurityUtil.currentCompanyId().equals(doc.getCompanyId()))
+                    || (role.equals("MANAGER_CENTER")  && SecurityUtil.currentDepartmentId().equals(doc.getDepartmentId()));
+            case COMPANY -> role.equals("ADMIN")
+                    || (role.equals("MANAGER_COMPANY") && SecurityUtil.currentCompanyId().equals(doc.getCompanyId()));
+            case GROUP   -> role.equals("ADMIN");
         };
         if(!ok) throw new ForbiddenException("Không đủ quyền duyệt văn bản cấp " + doc.getLevel());
     }
@@ -195,6 +219,14 @@ public class DocumentService {
         }catch (JsonProcessingException e) {
             throw new BusinessException("Không tạo được payload outbox");
         }
+    }
+
+    private boolean canRenew(Document doc){
+        String role = SecurityUtil.currentRole();
+        return doc.getOwnerId().equals(SecurityUtil.currentUserId())
+            || "ADMIN".equals(role)
+            || ("MANAGER_CENTER".equals(role) && SecurityUtil.currentDepartmentId().equals(doc.getDepartmentId()))
+            || ("MANAGER_COMPANY".equals(role) && SecurityUtil.currentCompanyId().equals(doc.getCompanyId()));
     }
 
     private Long nullIfSentinel(Long v) { return (v == null || v == -1L) ? null : v; }
