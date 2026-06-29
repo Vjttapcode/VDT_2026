@@ -178,7 +178,7 @@ public class DocumentService {
             String original = Paths.get(file.getOriginalFilename() == null ? "file" : file.getOriginalFilename()).getFileName().toString();
             String filename = UUID.randomUUID() +  "_" + original;
             Files.copy(file.getInputStream(), Paths.get(uploadDir, filename), StandardCopyOption.REPLACE_EXISTING);
-            doc.setFilePath("/upload/" + filename);
+            doc.setFilePath("/uploads/" + filename);
             return DocumentResponse.from(repo.save(doc));
         } catch (IOException e){
             throw new BusinessException("Lưu file thất bại: " + e.getMessage());
