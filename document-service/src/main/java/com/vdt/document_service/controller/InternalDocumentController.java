@@ -19,7 +19,7 @@ import jakarta.validation.Valid;
 
 
 @RestController
-@RequestMapping("/internal/documents/")
+@RequestMapping("/internal/documents")
 public class InternalDocumentController {
     
     private final DocumentService service;
