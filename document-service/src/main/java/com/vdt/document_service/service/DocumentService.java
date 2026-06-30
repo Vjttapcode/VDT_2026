@@ -1,12 +1,16 @@
 package com.vdt.document_service.service;
 
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
+import java.time.temporal.ChronoUnit;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
-import java.io.IOException;
-import java.nio.file.*;
 import java.util.UUID;
 
 import org.springframework.beans.factory.annotation.Value;
@@ -16,8 +20,10 @@ import org.springframework.web.multipart.MultipartFile;
 
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.vdt.document_service.client.AuthClient;
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
+import com.vdt.document_service.dto.ExpiringDocumentDto;
 import com.vdt.document_service.entity.ApprovalRequest;
 import com.vdt.document_service.entity.Document;
 import com.vdt.document_service.entity.DocumentStatus;
@@ -37,22 +43,25 @@ public class DocumentService {
     private final ApprovalRequestRepository approvalRepo;
     private final NotificationOutboxRepository outboxRepo;
     private final ObjectMapper objectMapper;
+    private final String uploadDir;
+    private final AuthClient authClient;
     private static final Set<String> ALLOWED_TYPES = Set.of(
         "application/pdf",
         "application/msword",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
+    private static final List<DocumentStatus> ALERT_STATUSES = List.of(DocumentStatus.ACTIVE, DocumentStatus.WARNING, DocumentStatus.EXPIRED); 
 
-    private final String uploadDir;
 
     public DocumentService(DocumentRepository repo, ApprovalRequestRepository approvalRepo,
         NotificationOutboxRepository outboxRepo, ObjectMapper objectMapper,
-        @Value("${app.upload-dir:uploads}") String uploadDir) {
+        @Value("${app.upload-dir:uploads}") String uploadDir, AuthClient authClient) {
         this.repo = repo;
         this.approvalRepo = approvalRepo;
         this.outboxRepo = outboxRepo;
         this.objectMapper = objectMapper;
         this.uploadDir = uploadDir;
+        this.authClient = authClient;
     }
 
     /** List filter theo role của người gọi. */
@@ -183,6 +192,23 @@ public class DocumentService {
         } catch (IOException e){
             throw new BusinessException("Lưu file thất bại: " + e.getMessage());
         }
+    }
+
+    @Transactional(readOnly=true)
+    public List<ExpiringDocumentDto> findExpiring(int withinDays) {
+        LocalDate today = LocalDate.now();
+        LocalDate threshold = today.plusDays(withinDays);
+        Map<Long, String> emailCache = new HashMap<>();
+
+        return repo.findExpiring(ALERT_STATUSES, threshold).stream()
+                .map(d -> new ExpiringDocumentDto(
+                    d.getId(),
+                    d.getLevel().name(),
+                    ChronoUnit.DAYS.between(today, d.getExpiryDate()),
+                    d.getDepartmentId(),
+                    d.getCompanyId(),
+                    emailCache.computeIfAbsent(d.getOwnerId(), authClient::getEmail)
+                )).toList();
     }
 
     // ---- helpers --------------------------------------------------
