@@ -1,3 +1,47 @@
 spring:
   application:
     name: notification-service
+  datasource:
+    url: ${SPRING_DATASOURCE_URL:jdbc:postgresql://localhost:5432/vdt_db}
+    username: ${SPRING_DATASOURCE_USERNAME:vdt}
+    password: ${SPRING_DATASOURCE_PASSWORD:vdt123}
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    properties:
+      hibernate:
+        default_schema: notification_schema
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+        format_sql: true
+    open-in-view: false
+    show-sql: true
+  flyway:
+    enabled: true
+    schemas: notification_schema
+    default-schema: notification_schema
+    create-schemas: true
+    locations: classpath:db/migration
+    baseline-on-migrate: true
+  mail:
+    host: ${SPRING_MAIL_HOST:localhost}
+    port: ${SPRING_MAIL_PORT:1025}
+    properties:
+      mail.smtp.auth: false
+      mail.smtp.starttls.enable: false
+
+server:
+  port: 8083
+
+document:
+  service:
+    url: ${DOCUMENT_SERVICE_URL:http://localhost:8082}
+auth:
+  service:
+    url: ${AUTH_SERVICE_URL:http://localhost:8081}
+alert:
+  from: no-reply@vdt.local
+
+logging:
+  level:
+    org.flywaydb: INFO
