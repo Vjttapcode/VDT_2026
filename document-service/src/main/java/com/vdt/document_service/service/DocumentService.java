@@ -51,7 +51,7 @@ public class DocumentService {
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document"
     );
     private static final List<DocumentStatus> ALERT_STATUSES = List.of(DocumentStatus.ACTIVE, DocumentStatus.WARNING, DocumentStatus.EXPIRED); 
-
+    private static final Set<DocumentStatus> ALERTABLE = Set.of(DocumentStatus.WARNING, DocumentStatus.EXPIRED);
 
     public DocumentService(DocumentRepository repo, ApprovalRequestRepository approvalRepo,
         NotificationOutboxRepository outboxRepo, ObjectMapper objectMapper,
@@ -209,6 +209,18 @@ public class DocumentService {
                     d.getCompanyId(),
                     emailCache.computeIfAbsent(d.getOwnerId(), authClient::getEmail)
                 )).toList();
+    }
+
+    @Transactional
+    public DocumentResponse updateStatus(Long id, DocumentStatus newStatus) {
+        if(!ALERTABLE.contains(newStatus))
+            throw new BusinessException("Internal API chỉ đặt được WARNING hoặc EXPIRED");
+
+        Document doc = findOrThrow(id);
+        if(doc.getStatus() != DocumentStatus.ACTIVE && doc.getStatus() != DocumentStatus.WARNING)
+            throw new BusinessException("Không đổi trạng thái từ " + doc.getStatus());
+        doc.setStatus(newStatus);
+        return DocumentResponse.from(repo.save(doc));
     }
 
     // ---- helpers --------------------------------------------------
