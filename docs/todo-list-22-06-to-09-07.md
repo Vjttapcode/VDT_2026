@@ -102,12 +102,13 @@
 - [x] `GlobalExceptionHandler` (BusinessException, Forbidden, NotFound) — Task 3.4 (đã làm từ Ngày 4)
 - [x] **Verify:** Submit→PENDING, Approve→ACTIVE, Reject→REJECTED, Renew→ACTIVE; upload trả file_path — E2E test PASSED (create→submit→approve→renew→upload + negative cases)
 
-### Ngày 6 — 27/06 (T7): document-service internal API + dockerize
-- [ ] `RestTemplate`/Feign client gọi auth-service `/internal/users/{id}`, lấy owner/manager/admin email
-- [ ] `GET /internal/documents/expiring` — trả danh sách {docId, level, daysLeft, departmentId, companyId, ownerEmail} — Task 2.5
-- [ ] `PATCH /internal/documents/{id}/status` — cho notification-service gọi khi EXPIRED/WARNING
-- [ ] Dockerize document-service + verify `docker-compose up --build` chạy auth + document cùng nhau
-- [ ] **Verify:** approve → outbox relay → mail Mailhog; 3 service (postgres, auth, document) up cùng nhau
+### ~~Ngày 6 — 27/06 (T7): document-service internal API + dockerize~~ ✅ DONE
+- [x] `AuthClient` (RestTemplate) gọi auth-service `/internal/users/{id}` → lấy email owner (nuốt lỗi trả null để không chặn cả batch); config `auth.service.url`
+- [x] `GET /internal/documents/expiring?withinDays=30` — `InternalDocumentController` + `DocumentService.findExpiring` + query `findExpiring(statuses, threshold)`; trả {docId, level, daysLeft, departmentId, companyId, ownerEmail}, cache email theo ownerId — Task 2.5
+- [x] `PATCH /internal/documents/{id}/status` — chỉ cho đặt WARNING/EXPIRED và chỉ từ ACTIVE/WARNING (validate); notification-service gọi khi EXPIRED/WARNING
+- [x] Dockerize document-service (`EXPOSE 8082`); `docker compose up --build postgres auth document` chạy 3 service cùng nhau OK
+- [x] **Verify:** E2E tạo→submit→approve (ACTIVE) → `/internal/documents/expiring` trả `daysLeft=10` + `ownerEmail` lấy chéo auth-service đúng; PATCH WARNING/EXPIRED 200, negative {DRAFT} → 400; 3 service (postgres healthy, auth, document) up cùng nhau, log không ERROR
+- [ ] *(Hoãn sang Ngày 7)* approve → outbox relay → **mail Mailhog**: chờ notification-service có endpoint `/internal/emails`
 
 ### Ngày 7 — 28/06 (CN): notification-service (full alert owner)
 - [ ] `V1__init_notification_schema.sql`: `alert_configs` (thêm `document_level`), `alert_queue`, `alert_logs` (unique index) — Task 2.6
