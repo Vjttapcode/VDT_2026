@@ -286,6 +286,9 @@ public class DocumentService {
             p.put("level", doc.getLevel().name());
             p.put("expiryDate", doc.getExpiryDate().toString());
             p.put("recipientRole", recipientRole);
+            p.put("ownerId", doc.getOwnerId());
+            p.put("departmentId", doc.getDepartmentId());
+            p.put("ownerEmail", authClient.getEmail(doc.getOwnerId()));
             if(reason!=null) p.put("reason", reason);
             return objectMapper.writeValueAsString(p);
         }catch (JsonProcessingException e) {
