@@ -6,12 +6,14 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -21,6 +23,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vdt.document_service.client.AuthClient;
+import com.vdt.document_service.dto.DashboardStatsDto;
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
 import com.vdt.document_service.dto.ExpiringDocumentDto;
@@ -209,6 +212,40 @@ public class DocumentService {
                     d.getCompanyId(),
                     emailCache.computeIfAbsent(d.getOwnerId(), authClient::getEmail)
                 )).toList();
+    }
+
+    @Transactional(readOnly = true)
+    public DashboardStatsDto dashboardStats() {
+        String role = SecurityUtil.currentRole();
+        List<Document> docs = switch (role) {                 // cùng switch với list()
+            case "ADMIN"           -> repo.findAll();
+            case "MANAGER_COMPANY" -> repo.findByCompanyId(SecurityUtil.currentCompanyId());
+            case "MANAGER_CENTER"  -> repo.findByDepartmentId(SecurityUtil.currentDepartmentId());
+            default                -> repo.findByOwnerId(SecurityUtil.currentUserId());   // USER
+        };
+
+        // đếm theo trạng thái trong bộ đã lọc theo role
+        Map<DocumentStatus, Long> byStatus = docs.stream()
+                .collect(Collectors.groupingBy(Document::getStatus, Collectors.counting()));
+
+        // danh sách sắp hết hạn 30 ngày (chỉ ACTIVE/WARNING/EXPIRED), sắp xếp gần hết hạn trước
+        LocalDate today = LocalDate.now();
+        LocalDate limit = today.plusDays(30);
+        List<DashboardStatsDto.ExpiringItem> expiring = docs.stream()
+            .filter(d -> ALERT_STATUSES.contains(d.getStatus()))
+            .filter(d -> d.getExpiryDate() != null && !d.getExpiryDate().isAfter(limit))
+            .sorted(Comparator.comparing(Document::getExpiryDate))
+            .map(d -> new DashboardStatsDto.ExpiringItem(
+                    d.getId(), d.getTitle(), d.getLevel().name(),
+                    ChronoUnit.DAYS.between(today, d.getExpiryDate())))
+            .toList();
+
+        return new DashboardStatsDto(
+            byStatus.getOrDefault(DocumentStatus.ACTIVE,  0L),
+            byStatus.getOrDefault(DocumentStatus.WARNING, 0L),
+            byStatus.getOrDefault(DocumentStatus.EXPIRED, 0L),
+            byStatus.getOrDefault(DocumentStatus.PENDING, 0L),
+            expiring);
     }
 
     @Transactional
