@@ -11,10 +11,12 @@ import org.springframework.http.HttpEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpMethod;
 import org.springframework.http.MediaType;
+import org.springframework.stereotype.Component;
 import org.springframework.web.client.RestTemplate;
 
 import com.vdt.notification_service.dto.ExpiringDocumentDto;
 
+@Component
 public class DocumentClient {
     private static final Logger log = LoggerFactory.getLogger(DocumentClient.class);
     private final RestTemplate rt;
