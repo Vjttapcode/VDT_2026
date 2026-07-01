@@ -19,6 +19,17 @@ jobs:
           - document-service
           - notification-service
           - scheduler-service
+    services:
+      postgres:
+        image: postgres:15
+        env:
+          POSTGRES_DB: vdt_db
+          POSTGRES_USER: vdt
+          POSTGRES_PASSWORD: vdt123
+        ports: ["5432:5432"]
+        options: >-
+          --health-cmd "pg_isready -U vdt -d vdt_db"
+          --health-interval 5s --health-timeout 5s --health-retries 10
     steps:
       - uses: actions/checkout@v4
 
@@ -29,9 +40,9 @@ jobs:
           java-version: "17" # KHỚP với <java.version>17</java.version> trong pom
           cache: maven
 
-      - name: Build ${{ matrix.service }}
+      - name: Build + test ${{ matrix.service }}
         working-directory: ${{ matrix.service }}
-        run: mvn -B clean package -DskipTests
+        run: mvn -B clean package
 
   # Job 2: build toàn bộ Docker image để verify Dockerfile syntax + layer
   docker-build:
