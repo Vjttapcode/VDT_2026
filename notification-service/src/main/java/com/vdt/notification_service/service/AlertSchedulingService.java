@@ -17,17 +17,15 @@ import com.vdt.notification_service.repository.AlertQueueRepository;
 
 @Service
 public class AlertSchedulingService {
-    private final ExpiringDocumentDto expiringDocumentDto;
     private static final Logger log = LoggerFactory.getLogger(AlertSchedulingService.class);
     private final DocumentClient documentClient;
     private final AuthClient authClient;
     private final AlertQueueRepository queueRepo;
 
-    public AlertSchedulingService(DocumentClient documentClient, AuthClient authClient, AlertQueueRepository queueRepo, ExpiringDocumentDto expiringDocumentDto) {
+    public AlertSchedulingService(DocumentClient documentClient, AuthClient authClient, AlertQueueRepository queueRepo) {
         this.documentClient = documentClient;
         this.authClient = authClient;
         this.queueRepo = queueRepo;
-        this.expiringDocumentDto = expiringDocumentDto;
     }
 
     @Scheduled(cron="0 0 8 * * *")

@@ -67,6 +67,7 @@ services:
       SPRING_MAIL_HOST: mailhog
       SPRING_MAIL_PORT: 1025
       DOCUMENT_SERVICE_URL: http://document-service:8082
+      AUTH_SERVICE_URL: http://auth-service:8081
     depends_on:
       postgres:
         condition: service_healthy
