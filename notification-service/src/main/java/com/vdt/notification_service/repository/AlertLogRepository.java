@@ -12,4 +12,6 @@ public interface AlertLogRepository extends JpaRepository<AlertLog, Long>{
         Long documentId, String recipientEmail, String alertType, LocalDate sentDate, String status);
     
     List<AlertLog> findByDepartmentIdAndSentDateBetweenOrderByCreatedAtDesc(Long deptId, LocalDate from, LocalDate to);
+
+    List<AlertLog> findBySentDateBetweenOrderByCreatedAtDesc(LocalDate from, LocalDate to);
 }
