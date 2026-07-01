@@ -1,3 +1,15 @@
 spring:
   application:
     name: scheduler-service
+
+server:
+  port: 8084
+
+# Relaxed-binding: env NOTIFICATION_SERVICE_URL (compose) -> notification.service.url
+notification:
+  service:
+    url: ${NOTIFICATION_SERVICE_URL:http://localhost:8083}
+
+logging:
+  level:
+    com.vdt.scheduler_service: INFO
