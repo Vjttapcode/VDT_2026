@@ -1,0 +1,20 @@
+{
+  "/api/auth": {
+    "target": "http://localhost:8081",
+    "secure": false,
+    "pathRewrite": { "^/api/auth": "" }
+  },
+  "/api/documents": {
+    "target": "http://localhost:8082",
+    "secure": false,
+    "pathRewrite": { "^/api/documents": "/documents" }
+  },
+  "/api/notifications": {
+    "target": "http://localhost:8083",
+    "secure": false
+  },
+  "/uploads": {
+    "target": "http://localhost:8082",
+    "secure": false
+  }
+}

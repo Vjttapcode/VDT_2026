@@ -1,0 +1,26 @@
+@if (list().length > 0) {
+  <div class="alert-grid">
+    @for (a of list(); track a.id) {
+      <div class="alert-card" [style.border-left-color]="a.stripe" (click)="store.selectedId.set(a.id)">
+        <div class="row1">
+          <span class="mono code">{{ a.code }}</span>
+          <span class="status-pill" [style.background]="a.badgeBg" [style.color]="a.badgeColor">{{ a.statusVn }}</span>
+        </div>
+        <div class="name">{{ a.title }}</div>
+        <div class="row3">
+          <span class="dept">{{ a.deptName }}</span>
+          <span class="days mono" [style.color]="a.badgeColor">{{ a.daysVn }}</span>
+        </div>
+      </div>
+    }
+  </div>
+} @else {
+  <div class="card all-clear">
+    <div class="icon">✓</div>
+    <div class="head">Không có văn bản cần xử lý</div>
+    <div class="sub">
+      @if (store.loading()) { Đang tải dữ liệu… }
+      @else { Tất cả văn bản đều còn hiệu lực. Quay lại sau nhé! }
+    </div>
+  </div>
+}

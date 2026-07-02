@@ -1,0 +1,96 @@
+@if (doc(); as d) {
+  <div class="overlay" (click)="close()"></div>
+
+  <div class="drawer">
+    <div class="stripe" [style.background]="d.stripe"></div>
+
+    <div class="drawer-head">
+      <div>
+        <span class="code mono">{{ d.code }}</span>
+        <div class="name">{{ d.title }}</div>
+        <span class="status-pill" [style.background]="d.badgeBg" [style.color]="d.badgeColor">
+          {{ d.statusVn }} · {{ d.daysVn }}
+        </span>
+      </div>
+      <button class="close-btn" (click)="close()">✕</button>
+    </div>
+
+    <div class="drawer-body">
+      <div class="meta-grid">
+        <div><div class="k">Loại văn bản</div><div class="v">{{ d.typeVn }}</div></div>
+        <div><div class="k">Phòng ban</div><div class="v">{{ d.deptName }}</div></div>
+        <div><div class="k">Cấp áp dụng</div><div class="v">{{ d.levelVn }}</div></div>
+        <div><div class="k">Số lần gia hạn</div><div class="v mono">{{ d.renewalCount }}</div></div>
+        <div><div class="k">Ngày tạo</div><div class="v mono">{{ d.issuedVn }}</div></div>
+        <div><div class="k">Ngày hết hạn</div><div class="v mono" [style.color]="d.badgeColor">{{ d.expiryVn }}</div></div>
+      </div>
+
+      @if (d.description) {
+        <div>
+          <div class="k">Mô tả</div>
+          <div class="desc">{{ d.description }}</div>
+        </div>
+      }
+
+      <div>
+        <div class="k" style="margin-bottom:8px">Tệp đính kèm</div>
+        @if (d.filePath) {
+          <div class="file-row">
+            <span class="file-icon"><span></span></span>
+            <div class="file-body">
+              <div class="file-name">{{ fileName(d.filePath) }}</div>
+              <div class="file-sub">Tệp đính kèm văn bản</div>
+            </div>
+            <a class="file-dl" [href]="fileUrl(d.filePath)" target="_blank">Tải xuống</a>
+          </div>
+        } @else {
+          <label class="file-upload">
+            <input type="file" hidden (change)="onFile($event)">
+            <span class="up-icon">↑</span> Bấm để tải tệp lên (PDF, DOCX…)
+          </label>
+        }
+      </div>
+
+      <div class="remind-note">
+        Nhắc nhở tự động sẽ gửi email cảnh báo tới <b>{{ d.deptName }}</b> theo các mốc
+        <span class="mono">T-30 / 15 / 7 / 1</span> ngày trước khi văn bản đến hạn.
+      </div>
+
+      @if (rejecting()) {
+        <div class="reject-box">
+          <div class="field-label">Lý do từ chối</div>
+          <textarea class="field-input" rows="3" [value]="rejectReason()"
+                    (input)="rejectReason.set($any($event.target).value)"
+                    placeholder="Nhập lý do…"></textarea>
+          <div class="reject-actions">
+            <button class="btn-ghost" (click)="rejecting.set(false)">Hủy</button>
+            <button class="btn-primary" [disabled]="!rejectReason().trim()" (click)="sendReject()">Xác nhận từ chối</button>
+          </div>
+        </div>
+      }
+
+      @if (confirmingDelete()) {
+        <div class="delete-box">
+          <span>Xóa vĩnh viễn văn bản này?</span>
+          <button class="btn-ghost" (click)="confirmingDelete.set(false)">Không</button>
+          <button class="btn-primary" (click)="doDelete()">Xóa</button>
+        </div>
+      }
+    </div>
+
+    <div class="drawer-foot">
+      @if (canApprove()) {
+        <button class="btn-primary grow" (click)="store.approve(d.id)">✓ Phê duyệt</button>
+        <button class="btn-ghost" (click)="rejecting.set(true)">Từ chối</button>
+      } @else if (canSubmit()) {
+        <button class="btn-primary grow" (click)="store.submit(d.id)">Gửi duyệt</button>
+        <button class="btn-ghost" (click)="confirmingDelete.set(true)">Xóa</button>
+      } @else if (canRenew()) {
+        <button class="btn-primary grow" (click)="store.renew(d)">Gia hạn +6 tháng</button>
+        <button class="btn-ghost" (click)="close()">Đóng</button>
+      } @else {
+        <button class="btn-ghost grow" (click)="close()">Đóng</button>
+      }
+    </div>
+  </div>
+}

@@ -1,0 +1,102 @@
+/* ===== VB Dashboard — theme đỏ trắng (Claude Design: Dashboard Van Ban - Layout Do) ===== */
+
+:root {
+  --red: #E22F29;
+  --red-light: #EE3A33;
+  --red-dark: #C62B26;
+  --bg: #EFECEF;
+  --ink: #1F2533;
+  --ink-2: #2A323F;
+  --ink-3: #5A6072;
+  --muted: #8A8595;
+  --muted-2: #A09BAA;
+  --border: #ECE8EC;
+  --border-2: #E7E3E7;
+  --amber: #E0A22E;
+  --green: #1E8E5A;
+  --blue: #3B6BB5;
+  --dark-card: #20242E;
+  --gold: #FFD15C;
+  --font-mono: 'IBM Plex Mono', monospace;
+}
+
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body {
+  font-family: 'Be Vietnam Pro', system-ui, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  color: var(--ink);
+  background: var(--bg);
+}
+a { text-decoration: none; }
+input, select, button, textarea { font-family: inherit; }
+button { cursor: pointer; }
+
+::-webkit-scrollbar { width: 10px; height: 10px; }
+::-webkit-scrollbar-thumb { background: #D8D3D8; border-radius: 8px; border: 2px solid var(--bg); }
+::-webkit-scrollbar-track { background: transparent; }
+
+@keyframes slideIn { from { transform: translateX(100%); } to { transform: translateX(0); } }
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes popIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
+@keyframes spin { to { transform: rotate(360deg); } }
+
+/* ===== shared building blocks ===== */
+.card {
+  background: #fff;
+  border: 1px solid var(--border);
+  border-radius: 15px;
+}
+
+.btn-primary {
+  font-size: 13px; font-weight: 600; color: #fff;
+  background: var(--red-light); border: none; border-radius: 10px;
+  padding: 11px 20px; transition: background .15s ease, transform .1s ease;
+  &:hover { background: var(--red); }
+  &:active { transform: scale(.98); }
+  &:disabled { opacity: .55; cursor: not-allowed; }
+}
+.btn-ghost {
+  font-size: 13px; font-weight: 600; color: var(--ink-3);
+  background: #F5F2F5; border: none; border-radius: 10px; padding: 11px 20px;
+  transition: background .15s ease;
+  &:hover { background: #ECE8EC; }
+}
+
+.doc-row { transition: background .12s ease; }
+.doc-row:hover { background: #FBF6F6; }
+
+.status-pill {
+  font-size: 10.5px; font-weight: 600; border-radius: 20px; padding: 3px 10px; white-space: nowrap;
+}
+
+.field-label { font-size: 12px; font-weight: 600; color: var(--ink-3); margin-bottom: 6px; }
+.field-input {
+  width: 100%; font-size: 13px; color: var(--ink);
+  background: #FAF8FA; border: 1px solid var(--border-2); border-radius: 10px;
+  padding: 11px 13px; outline: none; transition: border-color .15s ease, box-shadow .15s ease;
+  &:focus { border-color: var(--red-light); box-shadow: 0 0 0 3px rgba(238, 58, 51, .12); }
+}
+
+.mono { font-family: var(--font-mono); }
+
+.spinner {
+  width: 16px; height: 16px; flex: none; border-radius: 50%;
+  border: 2px solid rgba(255, 255, 255, .4); border-top-color: #fff;
+  animation: spin .7s linear infinite;
+}
+
+/* ===== toasts ===== */
+.toast-wrap {
+  position: fixed; bottom: 22px; left: 50%; transform: translateX(-50%);
+  display: flex; flex-direction: column; gap: 8px; z-index: 100; align-items: center;
+}
+.toast {
+  display: flex; align-items: center; gap: 9px;
+  font-size: 13px; font-weight: 500; color: #fff;
+  background: var(--dark-card); border-radius: 11px; padding: 11px 18px;
+  box-shadow: 0 12px 34px rgba(20, 16, 18, .3); animation: popIn .18s ease;
+  &.err { background: var(--red-dark); }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: #2ECC71; flex: none; }
+  &.err .dot { background: var(--gold); }
+}

@@ -1,0 +1,130 @@
+<div class="overview-grid">
+
+  <!-- ===== LEFT COLUMN ===== -->
+  <div class="left-col">
+    <div class="top-cards">
+      <!-- upload / quick add -->
+      <div class="card pad">
+        <div class="card-title">
+          <span class="tic" style="background:rgba(238,58,51,.12)"><span style="background:#EE3A33"></span></span>
+          <span>Tải lên văn bản</span>
+        </div>
+        <button class="dropzone" (click)="store.showAdd.set(true)">
+          <div class="drop-icon">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#EE3A33" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
+            </svg>
+          </div>
+          <div class="drop-text">Thêm văn bản mới<br>kèm hạn hiệu lực</div>
+        </button>
+        <button class="btn-primary full" (click)="store.showAdd.set(true)">Lưu văn bản</button>
+      </div>
+
+      <!-- recent -->
+      <div class="card pad">
+        <div class="card-title">
+          <span class="tic" style="background:rgba(255,193,92,.2)"><span class="round" style="background:#E0A22E"></span></span>
+          <span>Cập nhật gần đây</span>
+        </div>
+        <div class="recent-grid">
+          @for (r of store.recent(); track r.id) {
+            <div class="doc-row recent-item" (click)="store.selectedId.set(r.id)">
+              <span class="ric" [style.background]="r.iconBg"><span [style.background]="r.iconFg"></span></span>
+              <span class="rname">{{ r.title }}</span>
+            </div>
+          } @empty {
+            <div class="empty-sm">Chưa có văn bản nào.</div>
+          }
+        </div>
+      </div>
+    </div>
+
+    <!-- ===== overview table ===== -->
+    <div class="card table-card">
+      <div class="table-head">
+        <span class="tt">Văn bản gần đến hạn</span>
+        @for (c of chips; track c.key) {
+          <button class="chip" [class.on]="store.statusFilter() === c.key"
+                  (click)="store.statusFilter.set(c.key)">{{ c.label }}</button>
+        }
+        <button class="chip sort" (click)="cycleSort()">⇅ {{ sortLabels[store.sortBy()] }}</button>
+      </div>
+
+      <div class="tgrid thead">
+        <span>Tên · Name</span><span>Cập nhật</span><span>Loại</span><span>Hết hạn</span><span>Phòng ban</span><span>Trạng thái</span>
+      </div>
+
+      @for (d of tableDocs(); track d.id) {
+        <div class="tgrid doc-row trow" (click)="store.selectedId.set(d.id)">
+          <span class="cell-name">
+            <span class="ric" [style.background]="d.badgeBg"><span [style.background]="d.stripe"></span></span>
+            <span class="nm">{{ d.title }}</span>
+          </span>
+          <span class="mono dim">{{ d.updatedVn }}</span>
+          <span class="sm">{{ d.typeVn }}</span>
+          <span class="mono exp">{{ d.expiryVn }}</span>
+          <span class="sm ellip">{{ d.deptName }}</span>
+          <span><span class="status-pill" [style.background]="d.badgeBg" [style.color]="d.badgeColor">{{ d.statusVn }}</span></span>
+        </div>
+      } @empty {
+        <div class="empty">
+          @if (store.loading()) { Đang tải dữ liệu… } @else { Không có văn bản phù hợp. }
+        </div>
+      }
+    </div>
+  </div>
+
+  <!-- ===== RIGHT COLUMN ===== -->
+  <div class="right-col">
+    <!-- year at a glance -->
+    <div class="dark-card">
+      <div class="dark-left">
+        <div class="dk-title">Tổng quan {{ year }}</div>
+        <div class="dk-sub">Year at a glance</div>
+        <div class="dk-text">
+          Chào mừng trở lại! Hiện có
+          <span class="hl-red">{{ store.counts().expired }} văn bản</span> đã hết hạn và
+          <span class="hl-gold">{{ store.counts().warning }}</span> sắp đến hạn cần xử lý.
+        </div>
+        <div class="ontime">
+          <span class="oic"><span></span></span>
+          <div>
+            <div class="opct mono">{{ donut().onTime }}</div>
+            <div class="olbl">Đúng hạn · On-time</div>
+          </div>
+        </div>
+      </div>
+      <div class="dark-right">
+        <div class="donut" [style.background]="donut().gradient">
+          <div class="donut-hole">
+            <div class="dpct mono">{{ donut().riskPct }}</div>
+            <div class="dlbl">cần chú ý</div>
+          </div>
+        </div>
+        <div class="divider"></div>
+        <div class="mng">ĐANG QUẢN LÝ</div>
+        <div class="mng-count mono">{{ store.counts().total }}</div>
+        <div class="mng-sub">văn bản trong hệ thống</div>
+      </div>
+    </div>
+
+    <!-- bar chart -->
+    <div class="card pad chart-card">
+      <div class="chart-head">
+        <span class="tt">Hết hạn theo tháng</span>
+        <span class="range-tag mono">01 — 12 / {{ year }}</span>
+      </div>
+      <div class="chart">
+        <div class="bars">
+          @for (b of store.monthlyExpiry(); track b.m) {
+            <div class="bar-col" [title]="b.m + ': ' + b.v + ' văn bản'">
+              <span class="bar-val mono" [class.zero]="b.v === 0">{{ b.v }}</span>
+              <div class="bar" [style.height.px]="b.h"></div>
+              <span class="bar-label mono">{{ b.m }}</span>
+            </div>
+          }
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
