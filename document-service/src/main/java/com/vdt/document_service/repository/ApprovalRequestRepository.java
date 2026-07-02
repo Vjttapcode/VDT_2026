@@ -9,4 +9,5 @@ import com.vdt.document_service.entity.ApprovalRequest;
 
 public interface ApprovalRequestRepository extends JpaRepository<ApprovalRequest, Long>{
     List<ApprovalRequest> findByDocumentIdOrderByCreatedAtDesc(Long documentId);
+    void deleteByDocumentId(Long documentId);
 }

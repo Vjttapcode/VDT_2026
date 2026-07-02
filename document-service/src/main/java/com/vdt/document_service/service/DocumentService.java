@@ -121,6 +121,9 @@ public class DocumentService {
     public void delete(Long id) {
         Document doc = findOrThrow(id);
         assertOwner(doc);
+        // approval_requests / notification_outbox tham chiếu documents không có ON DELETE CASCADE
+        approvalRepo.deleteByDocumentId(id);
+        outboxRepo.deleteByDocumentId(id);
         repo.delete(doc);
     }
 
