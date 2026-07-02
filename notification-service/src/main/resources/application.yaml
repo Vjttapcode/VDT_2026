@@ -45,3 +45,12 @@ alert:
 logging:
   level:
     org.flywaydb: INFO
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: health
+  endpoint:
+    health:
+      show-details: never

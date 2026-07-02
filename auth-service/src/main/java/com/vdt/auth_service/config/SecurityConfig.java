@@ -18,6 +18,7 @@ public class SecurityConfig {
             .csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
+                .requestMatchers("/actuator/health").permitAll()   // healthcheck compose/K8s
                 .requestMatchers("/login").permitAll()
                 // /internal/** chỉ gọi trong docker network (không expose qua Nginx) -> để mở
                 .requestMatchers("/internal/**").permitAll()

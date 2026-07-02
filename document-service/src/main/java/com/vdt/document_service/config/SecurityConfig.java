@@ -16,6 +16,7 @@ public class SecurityConfig {
             .csrf(c -> c.disable())
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
+                .requestMatchers("/actuator/health").permitAll()  // healthcheck compose/K8s
                 .requestMatchers("/internal/**").permitAll()   // gọi nội bộ docker network
                 .anyRequest().authenticated())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
