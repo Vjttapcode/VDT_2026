@@ -73,6 +73,8 @@ jobs:
           script: |
             set -e
             cd ~/VDT_2026
-            git pull origin main
+            # Hard-sync về đúng origin/main (chịu được force-push / repo bẩn), thay cho git pull
+            git fetch origin main
+            git reset --hard origin/main
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans
             docker image prune -f
