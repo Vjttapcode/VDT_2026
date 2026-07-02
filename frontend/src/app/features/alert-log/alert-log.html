@@ -1,0 +1,68 @@
+<div class="card table-card">
+  <div class="table-head">
+    <span class="tt">Nhật ký cảnh báo · {{ noti.logs().length }}</span>
+    <span class="count-pill sent">{{ sentCount() }} đã gửi</span>
+    @if (failedCount() > 0) {
+      <span class="count-pill failed">{{ failedCount() }} thất bại</span>
+    }
+
+    <div class="filters">
+      <select class="filter-input" name="dept" [(ngModel)]="deptId" (ngModelChange)="reload()">
+        <option [ngValue]="null">Tất cả phòng ban</option>
+        @for (d of depts; track d.id) {
+          <option [ngValue]="d.id">{{ d.name }}</option>
+        }
+      </select>
+      <input class="filter-input" type="date" name="from" [(ngModel)]="from" (change)="reload()" title="Từ ngày">
+      <span class="sep">đến</span>
+      <input class="filter-input" type="date" name="to" [(ngModel)]="to" (change)="reload()" title="Đến ngày">
+      @if (deptId !== null || from || to) {
+        <button class="clear-btn" (click)="clearFilter()">Xóa lọc ✕</button>
+      }
+    </div>
+  </div>
+
+  <div class="tgrid thead">
+    <span>Ngày gửi</span><span>Văn bản</span><span>Người nhận</span><span>Vai trò</span><span>Phòng ban</span><span>Loại</span><span>Còn</span><span>Kết quả</span>
+  </div>
+
+  @for (l of noti.logs(); track l.id) {
+    <div class="tgrid doc-row trow" [class.clickable]="docTitles().has(l.documentId)"
+         (click)="openDoc(l.documentId)">
+      <span class="mono dim">{{ fmtVn(l.sentDate) }}</span>
+      <span class="doc-cell">
+        <span class="ric" [style.background]="l.alertType === 'EXPIRED' ? expTheme.bg : warnTheme.bg">
+          <span [style.background]="l.alertType === 'EXPIRED' ? expTheme.stripe : warnTheme.stripe"></span>
+        </span>
+        <span class="nm">{{ docTitle(l.documentId) }}</span>
+      </span>
+      <span class="mono email">{{ l.recipientEmail }}</span>
+      <span class="sm">{{ l.recipientRole ?? '-' }}</span>
+      <span class="sm ellip">{{ deptName(l.departmentId) }}</span>
+      <span>
+        <span class="status-pill"
+              [style.background]="l.alertType === 'EXPIRED' ? expTheme.bg : warnTheme.bg"
+              [style.color]="l.alertType === 'EXPIRED' ? expTheme.color : warnTheme.color">
+          {{ l.alertType === 'EXPIRED' ? 'Hết hạn' : 'Sắp hết hạn' }}
+        </span>
+      </span>
+      <span class="mono dim">{{ l.daysLeft != null ? l.daysLeft + ' ngày' : '-' }}</span>
+      <span>
+        <span class="status-pill" [class.ok]="l.status === 'SENT'" [class.fail]="l.status === 'FAILED'"
+              [title]="l.errorMessage ?? ''">
+          {{ l.status === 'SENT' ? 'Đã gửi' : 'Thất bại' }}
+        </span>
+      </span>
+    </div>
+  } @empty {
+    <div class="empty">
+      @if (noti.loading()) {
+        Đang tải nhật ký…
+      } @else if (noti.loadError(); as err) {
+        {{ err }}
+      } @else {
+        Chưa có cảnh báo nào trong khoảng thời gian này.
+      }
+    </div>
+  }
+</div>

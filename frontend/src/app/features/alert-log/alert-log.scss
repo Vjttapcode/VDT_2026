@@ -1,0 +1,75 @@
+.table-card { overflow: hidden; }
+
+.table-head {
+  display: flex; align-items: center; gap: 10px; padding: 14px 20px;
+  border-bottom: 1px solid #F0ECF0; flex-wrap: wrap;
+  .tt { font-size: 15px; font-weight: 700; color: var(--ink); white-space: nowrap; }
+}
+
+.count-pill {
+  font-size: 10.5px; font-weight: 600; border-radius: 20px; padding: 3px 10px; white-space: nowrap;
+  &.sent { background: rgba(30, 142, 90, .12); color: #1B7F50; }
+  &.failed { background: rgba(226, 47, 41, .10); color: var(--red-dark); }
+}
+
+.filters {
+  display: flex; align-items: center; gap: 8px; margin-left: auto; flex-wrap: wrap;
+  .sep { font-size: 11.5px; color: var(--muted-2); }
+}
+
+.filter-input {
+  font-size: 12px; color: var(--ink);
+  background: #FAF8FA; border: 1px solid var(--border-2); border-radius: 8px;
+  padding: 7px 10px; outline: none;
+  transition: border-color .15s ease;
+  &:focus { border-color: var(--red-light); }
+}
+
+.clear-btn {
+  font-size: 11.5px; font-weight: 600; color: var(--red);
+  background: #FDECEB; border: 1px solid #F8D5D3; border-radius: 8px; padding: 7px 11px;
+  transition: background .12s ease;
+  &:hover { background: #FBDDDB; }
+}
+
+.tgrid {
+  display: grid;
+  grid-template-columns: 84px 1.4fr 1.2fr 130px 150px 104px 70px 90px;
+  align-items: center; gap: 12px; padding: 12px 20px;
+}
+.thead {
+  padding: 11px 20px; font-size: 10px; font-weight: 600; color: var(--muted-2);
+  letter-spacing: .3px; text-transform: uppercase;
+}
+.trow {
+  border-top: 1px solid #F4F0F4;
+  &.clickable { cursor: pointer; }
+}
+
+.doc-cell { display: flex; align-items: center; gap: 10px; min-width: 0;
+  .nm { font-size: 12.5px; font-weight: 600; color: var(--ink-2); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+}
+.ric {
+  width: 24px; height: 24px; border-radius: 7px; flex: none;
+  display: flex; align-items: center; justify-content: center;
+  span { width: 8px; height: 8px; border-radius: 2px; }
+}
+
+.dim { font-size: 11px; color: var(--muted); }
+.sm { font-size: 11.5px; color: var(--ink-3); }
+.ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.email { font-size: 11px; color: var(--blue); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.status-pill {
+  &.ok { background: rgba(30, 142, 90, .12); color: #1B7F50; }
+  &.fail { background: rgba(226, 47, 41, .10); color: var(--red-dark); }
+}
+
+.empty { padding: 36px; text-align: center; font-size: 13px; color: var(--muted-2); }
+
+@media (max-width: 1080px) {
+  .tgrid { grid-template-columns: 80px 1.2fr 1fr 90px 80px; }
+  .thead span:nth-child(4), .trow > span:nth-child(4),
+  .thead span:nth-child(5), .trow > span:nth-child(5),
+  .thead span:nth-child(7), .trow > span:nth-child(7) { display: none; }
+}
