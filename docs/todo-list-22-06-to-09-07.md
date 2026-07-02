@@ -108,38 +108,42 @@
 - [x] `PATCH /internal/documents/{id}/status` — chỉ cho đặt WARNING/EXPIRED và chỉ từ ACTIVE/WARNING (validate); notification-service gọi khi EXPIRED/WARNING
 - [x] Dockerize document-service (`EXPOSE 8082`); `docker compose up --build postgres auth document` chạy 3 service cùng nhau OK
 - [x] **Verify:** E2E tạo→submit→approve (ACTIVE) → `/internal/documents/expiring` trả `daysLeft=10` + `ownerEmail` lấy chéo auth-service đúng; PATCH WARNING/EXPIRED 200, negative {DRAFT} → 400; 3 service (postgres healthy, auth, document) up cùng nhau, log không ERROR
-- [ ] *(Hoãn sang Ngày 7)* approve → outbox relay → **mail Mailhog**: chờ notification-service có endpoint `/internal/emails`
+- [x] *(làm ở Ngày 7)* approve → outbox relay → **mail Mailhog** qua `/internal/emails` — E2E: approve doc → `[Đã duyệt]` tới owner ✓
 
-### Ngày 7 — 28/06 (CN): notification-service (full alert owner)
-- [ ] `V1__init_notification_schema.sql`: `alert_configs` (thêm `document_level`), `alert_queue`, `alert_logs` (unique index) — Task 2.6
-- [ ] `EmailService` (HTML email, màu theo ngưỡng, JavaMailSender → Mailhog) — Task 2.7
-- [ ] `AlertService.processAlert` — check trùng, gửi, log SENT/FAILED — Task 2.8
-- [ ] `AlertQueueProcessor` — `@Scheduled(fixedDelay=30_000)`, đọc `alert_queue`, xử lý async + PATCH EXPIRED/WARNING sang document-service — Task 2.8b
-- [ ] `DocumentClient` (Feign) → `GET /internal/documents/expiring` — Task 2.8c
-- [ ] `AuthClient` (Feign) → `/internal/manager/center/{id}`, `/internal/manager/company/{id}`, `/internal/admin` — Task 2.8c
-- [ ] `AlertSchedulingService` — `@Scheduled(cron="0 0 8 * * *")` tự pull DocumentClient + ghi `alert_queue` trong cùng DB (true outbox), `resolveRecipients(level × daysLeft)` — Task 2.8c
-- [ ] `POST /internal/trigger` (InternalTriggerController → gọi `AlertSchedulingService.runCheck()`)
-- [ ] `POST /internal/emails` (OutboxRelayJob của document-service gọi để gửi approval email)
-- [ ] `GET /api/notifications/alert-logs` (filter phòng / khoảng ngày)
-- [ ] `GET /api/notifications/dashboard/stats` — trả `{active, warning, expired, pending, expiringIn30Days[]}` filter theo role — Task 3.1
-- [ ] **Verify:** POST `/internal/trigger` → `alert_queue` có entry → 30s sau mail trong Mailhog; gửi 2 lần → không trùng; dashboard stats trả đúng số theo role
+### ~~Ngày 7 — 28/06 (CN): notification-service (full alert owner)~~ ✅ DONE
+- [x] `V1__init_notification_schema.sql`: `alert_configs` (có `document_level`), `alert_queue`, `alert_logs` (unique **partial** index chống trùng SENT) — Task 2.6
+- [x] `EmailService` (HTML email, màu theo ngưỡng, JavaMailSender → Mailhog) — Task 2.7
+- [x] `AlertService.processAlert` — check trùng, gửi, log SENT/FAILED — Task 2.8
+- [x] `AlertQueueProcessor` — `@Scheduled(fixedDelay=30_000)`, đọc `alert_queue`, xử lý + PATCH EXPIRED/WARNING sang document-service — Task 2.8b
+- [x] `DocumentClient` (**RestTemplate**, không Feign — đồng bộ document-service; PATCH cần `JdkClientHttpRequestFactory`) → `GET /internal/documents/expiring` + PATCH status — Task 2.8c
+- [x] `AuthClient` (**RestTemplate**) → `/internal/manager/center/{id}`, `/internal/manager/company/{id}`, `/internal/admin` — Task 2.8c
+- [x] `AlertSchedulingService` — `@Scheduled(cron="0 0 8 * * *")` tự pull DocumentClient + ghi `alert_queue` (true outbox), `resolveRecipients(level × daysLeft)` — Task 2.8c
+- [x] `POST /internal/trigger` (InternalTriggerController → gọi `AlertSchedulingService.runCheck()`)
+- [x] `POST /internal/emails` (OutboxRelayJob của document-service gọi để gửi approval email)
+- [x] `GET /api/notifications/alert-logs` (filter phòng / khoảng ngày)
+- [x] `GET /api/documents/dashboard/stats` — **chuyển sang document-service** (nơi sở hữu data + đã có JWT/role filter) thay vì notification, trả `{active, warning, expired, pending, expiringIn30Days[]}` theo role — Task 3.1
+- [x] **Verify:** `/internal/trigger` → `alert_queue` → 30s mail Mailhog; escalation doc còn 5 ngày → owner+MANAGER_CENTER; PATCH ACTIVE→WARNING; gửi 2 lần → không trùng (Mailhog giữ 3); approval email `[Cần duyệt]`+`[Đã duyệt]`; dashboard stats đúng theo role; 5 service Docker up
+- [x] **Dockerize** notification-service (`EXPOSE 8083`) + compose thêm `AUTH_SERVICE_URL` — Commit 10
 
-### Ngày 8 — 29/06 (T2): scheduler-service (thin proxy) + integration test E2E
-- [ ] `NotificationClient` (Feign, 1 method): `POST /internal/trigger` → notification-service
-- [ ] `TriggerController`: `POST /internal/trigger` → forward sang notification-service
-- [ ] `application.yml` scheduler: chỉ cần `services.notification.url`, không cần datasource/Flyway
-- [ ] Dockerize scheduler-service (tất cả 4 service + postgres + mailhog lên cùng nhau)
-- [ ] **Integration test E2E:**
-  - `POST http://localhost:8084/internal/trigger` → forward → notification `runCheck()` → `alert_queue` entry → 30s → mail Mailhog
-- [ ] **Verify:** văn bản CENTER T-7 → MANAGER_CENTER nhận mail; hết hạn → EXPIRED + ADMIN nhận mail; gửi 2 lần → không trùng
+### ~~Ngày 8 — 29/06 (T2): scheduler-service (thin proxy) + integration test E2E~~ ✅ DONE
+- [x] `NotificationClient` (**RestTemplate**, không Feign — đồng bộ project): `POST /internal/trigger` → notification-service
+- [x] `TriggerController`: `POST /internal/trigger` → forward sang notification-service (trả `{status:forwarded, notification:{...}}`); `GlobalExceptionHandler` → 502 khi notification down
+- [x] `application.yaml` scheduler: `server.port:8084` + `notification.service.url` (bind env `NOTIFICATION_SERVICE_URL`), không datasource/Flyway
+- [x] Dockerize scheduler-service (`EXPOSE 8084`) + tidy compose (bỏ `DOCUMENT_SERVICE_URL` thừa); 5 service + postgres + mailhog lên cùng nhau OK
+- [x] **Integration test** (`MockRestServiceServer`): `mvn test` xanh — assert forward POST đúng + body `enqueued`
+- [x] **Verify E2E thật (01/07):** `POST :8084/internal/trigger` → forward qua Docker network → `runCheck()` enqueue 9 → 30s → 6 mail Mailhog (doc 5/6):
+  - CENTER T-5 (doc#5, ACTIVE) → owner(user) + **MANAGER_CENTER**; status PATCH ACTIVE→WARNING ✓
+  - EXPIRED (doc#6) → owner + MANAGER_CENTER + MANAGER_COMPANY + **ADMIN**; status PATCH ACTIVE→EXPIRED ✓
+  - gửi 2 lần → **không trùng** (Mailhog=0 sau trigger#2, `alert_logs` giữ 9 SENT nhờ partial unique index); log không ERROR
 
 ### Ngày 9 — 30/06 (T3): Backend buffer + CI/CD finalize
-- [ ] Cập nhật CI job `build-test`: chạy `mvn test` thay vì `-DskipTests` (sau khi có một số test)
-- [ ] Thêm `healthcheck` trong `docker-compose.yml` cho postgres + các service
-- [ ] Review log toàn bộ 4 service: không có `ERROR` nào không xử lý
-- [ ] Seed data test hoàn chỉnh: users 4 role, văn bản ở mọi ngưỡng (T-30/15/7/1/EXPIRED, level CENTER/COMPANY/GROUP)
-- [ ] Dọn nợ kỹ thuật: exception handler còn thiếu, HTTP status code chưa đúng, nullable check
-- [ ] **Verify cuối tuần A:** `docker-compose up --build` sạch → login 4 role → tạo + approve + alert; CI pipeline green
+- [ ] Cập nhật CI job `build-test`: chạy `mvn test` thay vì `-DskipTests` (sau khi có một số test) — *còn lại (cần Postgres service container trong CI)*
+- [x] Thêm `healthcheck` trong `docker-compose.yml` cho postgres + các service — actuator `/health` + curl; chuỗi `depends_on: service_healthy` (postgres→backend→notification→scheduler→nginx) verify OK
+- [x] Review log toàn bộ 4 service: không có `ERROR` nào không xử lý — 0 dòng ERROR-level thật (3 dòng WARN của DocumentClient khi re-trigger PATCH EXPIRED→EXPIRED là handled/idempotent)
+- [x] Seed data test hoàn chỉnh: users 4 role, văn bản ở mọi ngưỡng (T-30/15/7/1/EXPIRED, level CENTER/COMPANY/GROUP) — auth V3 (8 user/4 role) + document V3 (9 doc) verify qua DB
+- [x] Dọn nợ kỹ thuật: exception handler còn thiếu, HTTP status code chưa đúng, nullable check — thêm 413 upload/400 JSON lỗi/**fix 404 endpoint không tồn tại bị hạ thành 500** (3 service); noti thêm GlobalExceptionHandler
+- [x] **Verify cuối tuần A:** `docker-compose up --build` sạch → login 4 role (200) → tạo(201)→submit(PENDING)→approve(ACTIVE) → trigger alert: 23 SENT (12 EXPIRED+11 WARNING), PATCH ACTIVE→WARNING/EXPIRED, re-trigger không trùng ✓ (CI pipeline: chưa — thuộc mục trên)
+  - ⚠️ **Nợ Ngày 10:** nginx `location /api/documents/` → `proxy_pass docs/` strip thành `/`, lệch với `@RequestMapping("/documents")` → FE gọi `/api/documents` hiện không tới controller (phải sửa nginx hoặc bỏ prefix controller)
 
 ---
 

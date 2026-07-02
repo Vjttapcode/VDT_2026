@@ -15,3 +15,4 @@ uploads/
 # Agents & Tools
 .claude
 .agents
+skills-lock.json
