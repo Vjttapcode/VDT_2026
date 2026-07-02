@@ -23,6 +23,12 @@ public class GlobalExceptionHandler {
         return build(HttpStatus.BAD_GATEWAY, "Service phụ thuộc không phản hồi");
     }
 
+    // 400 — request sai (validate ngưỡng alert-config, id không tồn tại...)
+    @ExceptionHandler(IllegalArgumentException.class)
+    public ResponseEntity<Map<String, Object>> handleBadRequest(IllegalArgumentException e) {
+        return build(HttpStatus.BAD_REQUEST, e.getMessage());
+    }
+
     // 404 — gọi endpoint không tồn tại (giữ đúng status, tránh catch-all hạ thành 500)
     @ExceptionHandler(NoResourceFoundException.class)
     public ResponseEntity<Map<String, Object>> handleNoResource(NoResourceFoundException e) {
