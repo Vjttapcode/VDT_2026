@@ -2,6 +2,7 @@
 
 > **Điểm bắt đầu:** Hạ tầng (Docker Compose, Nginx, `.env`) và codebase scaffold (4 service Spring Initializr + dependency) đã xong.
 > **Phần còn lại:** Toàn bộ code thực — auth-service, document-service, notification-service, scheduler-service, **frontend (chưa `ng new`)**, dashboard, polish, test, báo cáo, demo.
+> **Trạng thái 02/07:** Backend 4 service ✅ (N1–9). Frontend core ✅ — Angular 20, UI theo Claude Design "Layout Đỏ": login, layout, dashboard, documents, alerts, drawer (submit/approve/reject/renew/upload/delete), add modal. Còn lại: alert log + admin + roleGuard (N12), dockerize frontend (N13), test + báo cáo + demo (N14–18).
 > **Chiến lược:** Vertical slice (DB → API → UI) để luôn có thứ demo được. Bổ sung cho [ke-hoach-3-tuan-1-nguoi.md](./ke-hoach-3-tuan-1-nguoi.md).
 > **Deadline:** 09/07 (Thứ 5).
 
@@ -20,10 +21,10 @@
 | 7 | 28/06 | CN | notification-service (full alert owner) | `POST /internal/trigger` → 30s → mail Mailhog |
 | 8 | 29/06 | T2 | scheduler-service (thin proxy) + integration test E2E | `8084/trigger` → forward → mail đúng cấp |
 | 9 | 30/06 | T3 | Backend buffer + CI/CD finalize | 4 service compose clean; CI badge xanh |
-| 10 | 01/07 | T4 | Frontend: Angular scaffold + auth | `ng serve` + login E2E, guard theo role |
-| 11 | 02/07 | T5 | Frontend: document list + form + detail | Tạo/xem/upload trên UI |
-| 12 | 03/07 | T6 | Frontend: approval + alert log + admin | Duyệt/từ chối từ UI; alert log; user mgmt |
-| 13 | 04/07 | T7 | Frontend: dashboard + gia hạn + polish | Stat cards, renew dialog, spinner/snackbar |
+| 10 | 01/07 | T4 | ~~Frontend: Angular scaffold + auth~~ ✅ (làm 02/07) | `ng serve` + login E2E, authGuard hoạt động |
+| 11 | 02/07 | T5 | ~~Frontend: dashboard + documents + approval + renew~~ ✅ (vượt kế hoạch — gộp phần lớn N12-13) | Dashboard theo Claude Design; tạo/duyệt/gia hạn/upload/xóa trên UI |
+| 12 | 03/07 | T6 | Frontend: alert log + admin + roleGuard | Alert log page; user mgmt + alert config; guard theo role |
+| 13 | 04/07 | T7 | Frontend: dockerize + prod qua nginx + polish | `docker compose up` có frontend; build prod chạy qua `http://localhost` |
 | 14 | 05/07 | CN | Frontend buffer + seed data | Fix bug UI, seed đủ scenarios test |
 | 15 | 06/07 | T2 | E2E test + seed data + fix bug | Checklist test đầy đủ xanh |
 | 16 | 07/07 | T3 | Báo cáo (kiến trúc + data model + feature) | Draft báo cáo ~80% |
@@ -143,39 +144,49 @@
 - [x] Seed data test hoàn chỉnh: users 4 role, văn bản ở mọi ngưỡng (T-30/15/7/1/EXPIRED, level CENTER/COMPANY/GROUP) — auth V3 (8 user/4 role) + document V3 (9 doc) verify qua DB
 - [x] Dọn nợ kỹ thuật: exception handler còn thiếu, HTTP status code chưa đúng, nullable check — thêm 413 upload/400 JSON lỗi/**fix 404 endpoint không tồn tại bị hạ thành 500** (3 service); noti thêm GlobalExceptionHandler
 - [x] **Verify cuối tuần A:** `docker-compose up --build` sạch → login 4 role (200) → tạo(201)→submit(PENDING)→approve(ACTIVE) → trigger alert: 23 SENT (12 EXPIRED+11 WARNING), PATCH ACTIVE→WARNING/EXPIRED, re-trigger không trùng ✓ (CI pipeline: chưa — thuộc mục trên)
-  - ⚠️ **Nợ Ngày 10:** nginx `location /api/documents/` → `proxy_pass docs/` strip thành `/`, lệch với `@RequestMapping("/documents")` → FE gọi `/api/documents` hiện không tới controller (phải sửa nginx hoặc bỏ prefix controller)
+  - ~~⚠️ **Nợ Ngày 10:** nginx `location /api/documents/` → `proxy_pass docs/` strip thành `/`, lệch với `@RequestMapping("/documents")`~~ ✅ **Đã trả 02/07:** sửa `nginx.conf` — `/api/documents` → `proxy_pass docs/documents` (rewrite đúng), `/api/notifications` giữ nguyên path (controller mount sẵn `/api/notifications`); dev dùng `frontend/proxy.conf.json` mapping y hệt
 
 ---
 
 ## Tuần B — Frontend (01/07–07/07)
 
-### Ngày 10 — 01/07 (T4): Frontend scaffold + auth
-- [ ] `ng new frontend --routing --style=scss --skip-tests` + `ng add @angular/material`
-- [ ] `AuthService`: login/logout/getToken/hasRole/isLoggedIn
-- [ ] `authInterceptor`: gắn Bearer token, handle 401 → logout
-- [ ] `authGuard` + `roleGuard`
-- [ ] Login component (reactive form + gọi API + lưu token)
-- [ ] Layout cơ bản (toolbar + sidenav) + routing theo role
-- [ ] **Verify:** 3 role login redirect đúng trang; guard chặn `/documents` khi chưa login
+### ~~Ngày 10 — 01/07 (T4): Frontend scaffold + auth~~ ✅ DONE (làm 02/07)
+- [x] `ng new frontend --routing --style=scss --skip-tests` — dùng **Angular 20** (Node máy v24.13 không tương thích CLI 17 lẫn 22); **KHÔNG** dùng Angular Material — UI custom 100% theo Claude Design "Layout Đỏ" (theme đỏ trắng #E22F29, font Be Vietnam Pro + IBM Plex Mono)
+- [x] `AuthService`: login/logout/getToken/isLoggedIn (+ signals: user, initials, roleVn, isManager)
+- [x] `authInterceptor`: gắn Bearer token, handle 401 → logout
+- [x] `authGuard` (check JWT exp) — *`roleGuard` chưa cần: chưa có route riêng theo role, chuyển Ngày 12*
+- [x] Login component: form + error handling + 3 nút tài khoản demo điền sẵn (`admin`/`manager.center`/`user1` @vdt.com / `password`)
+- [x] Layout shell: header đỏ gradient (search, + Thêm văn bản, chuông thông báo dropdown, avatar menu đăng xuất) + sidebar icon 6 mục có badge cảnh báo + KPI row dùng chung mọi trang
+- [x] **Verify:** login admin qua browser thật OK; guard chặn khi chưa login; *3 role dùng chung `/dashboard` (thiết kế 1 dashboard, data tự filter theo role ở backend) — khác kế hoạch gốc "redirect theo role"*
 
-### Ngày 11 — 02/07 (T5): Frontend documents (list + form + detail + upload)
-- [ ] Document list: bảng + filter status + màu chip theo trạng thái
-- [ ] Document form (tạo/sửa) reactive form + validator ngày hết hạn tương lai
-- [ ] Document detail: hiển thị đầy đủ + link file + upload PDF/Word
-- [ ] Filter theo role (USER chỉ thấy của mình, MANAGER_CENTER thấy cả phòng)
-- [ ] **Verify:** tạo / sửa / xem theo role; upload file hiện preview link
+### ~~Ngày 11 — 02/07 (T5): Frontend dashboard + documents + approval + renew~~ ✅ DONE (vượt kế hoạch)
+> Import design từ Claude Design (`Dashboard Van Ban - Layout Do`) và implement trọn: gộp luôn dashboard (N13), approval UI + reject dialog (N12), renew (N13) vào hôm nay.
+- [x] **Dashboard** (Task 3.2 làm sớm): 4 KPI cards (bấm để lọc, ring highlight) + thẻ Tải lên + Cập nhật gần đây + bảng văn bản sắp đến hạn + thẻ tối "Tổng quan 2026" (donut % cần chú ý, % đúng hạn) + bar chart hết hạn theo tháng (tính từ data thật); stats gọi `GET /api/documents/dashboard/stats`
+- [x] Trang **Toàn bộ văn bản**: bảng mã/loại/phòng ban/cấp/hạn/trạng thái + chip filter màu (Tất cả/Sắp hết hạn/Đã hết hạn/Còn hiệu lực/Chờ xử lý) + sort xoay vòng (Mức khẩn/Tên/Loại) + search realtime trên header
+- [x] Trang **Cảnh báo**: grid thẻ theo mức khẩn (stripe đỏ/vàng, số ngày quá hạn/còn lại)
+- [x] Document detail → **drawer** trượt phải: đầy đủ thông tin + mô tả + link tải file + upload PDF/Word + ghi chú nhắc hạn T-30/15/7/1
+- [x] Thêm văn bản → **modal**: title + 4 loại + 3 cấp + mô tả + slider thời hạn (7–730 ngày, preview ngày hết hạn) + checkbox "Gửi duyệt ngay"
+- [x] Nút **Submit / Approve / Reject** theo trạng thái + role (drawer tự đổi action; Reject có ô nhập lý do) — *N12 item làm sớm*
+- [x] **Renew** "+6 tháng" cho ACTIVE/WARNING/EXPIRED — *N13 item làm sớm; đơn giản hóa: không dialog chọn ngày*
+- [x] **Delete** (DRAFT/REJECTED, kèm confirm) — phát hiện + fix bug backend: `DocumentService.delete()` vỡ FK `approval_requests`/`notification_outbox` (không có ON DELETE CASCADE) → thêm `deleteByDocumentId` xóa bản ghi con trước
+- [x] Polish (N13 items làm sớm): toast success/error thống nhất, empty state, loading state, trạng thái ACTIVE/WARNING/EXPIRED derive realtime từ `daysLeft` (không chờ cron backend flip)
+- [x] Filter theo role: backend đảm nhiệm qua JWT (USER thấy của mình, MANAGER_CENTER cả phòng…)
+- [x] Sửa nginx path mapping (nợ N10) + tạo `frontend/proxy.conf.json` cho dev
+- [x] **Verify E2E browser thật:** login → dashboard 10 văn bản thật → renew doc EXPIRED → "Còn hiệu lực", hạn +180 ngày, renewal_count +1 → tạo mới + gửi duyệt → drawer hiện Phê duyệt/Từ chối (admin) → xóa doc test 204 ✓
 
-### Ngày 12 — 03/07 (T6): Frontend approval + alert log + admin
-- [ ] Nút Submit / Approve / Reject theo role; Reject dialog (nhập lý do)
-- [ ] Alert log page: bảng + filter phòng/ngày + màu SENT/FAILED
-- [ ] Admin: user list + tạo user + đổi role + alert config ngưỡng remind_days
-- [ ] **Verify:** User nộp duyệt → Manager duyệt từ UI → email Mailhog; admin tạo user + chỉnh ngưỡng
+### Ngày 12 — 03/07 (T6): Frontend alert log + admin + roleGuard
+- [ ] Alert log page: bảng `GET /api/notifications/alert-logs` + filter phòng/ngày + màu SENT/FAILED (thay placeholder "Báo cáo" hiện tại)
+- [ ] Admin: user list + tạo user + đổi role + alert config ngưỡng remind_days (thay placeholder "Tài khoản")
+- [ ] `roleGuard` cho route admin (chỉ ADMIN/MANAGER)
+- [ ] Ẩn nút "+ Thêm văn bản"/Approve theo role ở mọi chỗ (hiện mới xử lý trong drawer)
+- [ ] **Verify:** User nộp duyệt → Manager duyệt từ UI → email Mailhog; admin tạo user + chỉnh ngưỡng; USER không thấy nút Approve
 
-### Ngày 13 — 04/07 (T7): Frontend dashboard + gia hạn + polish
-- [ ] Dashboard component: gọi `GET /api/notifications/dashboard/stats` → 4 stat cards + bảng sắp hết hạn 30 ngày — Task 3.2
-- [ ] Renew dialog (chọn ngày mới, validate tương lai, gọi `POST /documents/{id}/renew`)
-- [ ] Loading spinner + empty state + Snackbar error/success thống nhất
-- [ ] **Verify:** dashboard số liệu khớp dữ liệu thật; renew WARNING/EXPIRED → ACTIVE → renewal_count tăng
+### Ngày 13 — 04/07 (T7): Frontend dockerize + prod + polish còn lại
+- [ ] Dockerfile multi-stage cho frontend (build Angular → nginx serve static) + thêm vào `docker-compose.yml`
+- [ ] Nginx: serve frontend tại `/` + giữ proxy `/api/*` — verify build prod chạy `http://localhost` không cần `ng serve`
+- [ ] Placeholder "Lịch hết hạn": làm calendar view đơn giản hoặc giữ placeholder (tùy thời gian)
+- [ ] Responsive check (đã có breakpoint 1180px/860px, test thêm)
+- [ ] **Verify:** `docker compose up --build` → full stack kể cả UI; dashboard số liệu khớp dữ liệu thật
 
 ### Ngày 14 — 05/07 (CN): Frontend buffer + seed data hoàn chỉnh
 - [ ] Fix bug UI còn tồn đọng từ Days 10-13
