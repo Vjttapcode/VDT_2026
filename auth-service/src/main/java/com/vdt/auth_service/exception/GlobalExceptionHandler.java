@@ -7,6 +7,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
+import org.springframework.web.servlet.resource.NoResourceFoundException;
 
 @RestControllerAdvice
 public class GlobalExceptionHandler {
@@ -31,6 +32,12 @@ public class GlobalExceptionHandler {
                 .map(f -> f.getField() + ": " + f.getDefaultMessage())
                 .orElse("Dữ liệu không hợp lệ");
         return body(HttpStatus.BAD_REQUEST, msg);
+    }
+
+    // 404 — gọi endpoint không tồn tại (giữ đúng status, tránh catch-all hạ thành 500)
+    @ExceptionHandler(NoResourceFoundException.class)
+    public ResponseEntity<?> notFoundEndpoint(NoResourceFoundException e) {
+        return body(HttpStatus.NOT_FOUND, "Không tìm thấy endpoint");
     }
 
     // 500 — fallback: không để lộ stacktrace ra client
