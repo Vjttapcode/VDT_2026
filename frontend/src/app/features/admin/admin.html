@@ -1,0 +1,165 @@
+<div class="admin-wrap">
+
+  <!-- tab switcher -->
+  <div class="tabs">
+    <button class="chip" [class.on]="tab() === 'users'" (click)="tab.set('users')">Người dùng</button>
+    <button class="chip" [class.on]="tab() === 'configs'" (click)="tab.set('configs')">Ngưỡng cảnh báo</button>
+  </div>
+
+  @if (tab() === 'users') {
+    <!-- ===== USERS TABLE ===== -->
+    <div class="card table-card">
+      <div class="table-head">
+        <span class="tt">Người dùng · {{ admin.users().length }}</span>
+      </div>
+
+      <div class="tgrid thead">
+        <span>Email</span><span>Họ tên</span><span>Vai trò</span><span>Phòng ban</span><span>Trạng thái</span><span></span>
+      </div>
+
+      @for (u of admin.users(); track u.id) {
+        <div class="tgrid trow">
+          <span class="mono email">{{ u.email }}</span>
+          <span class="name">{{ u.fullName }}@if (isSelf(u)) { <span class="you">bạn</span> }</span>
+
+          @if (editingId() === u.id) {
+            <span class="edit-cell">
+              <select class="filter-input" name="editRole-{{ u.id }}" [(ngModel)]="editRole">
+                @for (r of roleOptions; track r.value) {
+                  <option [ngValue]="r.value">{{ r.label }}</option>
+                }
+              </select>
+              @if (needsDept(editRole)) {
+                <select class="filter-input" name="editDept-{{ u.id }}" [(ngModel)]="editDeptId">
+                  @for (d of depts(); track d.id) {
+                    <option [ngValue]="d.id">{{ d.name }}</option>
+                  }
+                </select>
+              }
+              <button class="mini-btn ok" (click)="confirmEdit(u)">✓</button>
+              <button class="mini-btn" (click)="editingId.set(null)">✕</button>
+            </span>
+          } @else {
+            <span class="sm role">{{ roleVn[u.role] }}</span>
+          }
+
+          <span class="sm ellip">{{ deptName(u.departmentId) }}</span>
+          <span>
+            <span class="status-pill" [class.ok]="u.isActive !== false" [class.off]="u.isActive === false">
+              {{ u.isActive === false ? 'Đã khóa' : 'Hoạt động' }}
+            </span>
+          </span>
+          <span class="actions">
+            @if (!isSelf(u) && editingId() !== u.id) {
+              <button class="mini-btn" title="Đổi vai trò" (click)="startEdit(u)">Đổi vai trò</button>
+              <button class="mini-btn" [class.warn]="u.isActive !== false"
+                      (click)="toggleActive(u)">{{ u.isActive === false ? 'Mở khóa' : 'Khóa' }}</button>
+            }
+          </span>
+        </div>
+      } @empty {
+        <div class="empty">
+          @if (admin.loading()) { Đang tải danh sách… }
+          @else if (admin.loadError(); as err) { {{ err }} }
+          @else { Chưa có người dùng nào. }
+        </div>
+      }
+    </div>
+
+    <!-- ===== CREATE USER ===== -->
+    <div class="card create-card">
+      <div class="create-title">Tạo tài khoản mới</div>
+      <form class="create-grid" (ngSubmit)="submitCreate()">
+        <div>
+          <div class="field-label">Họ tên</div>
+          <input class="field-input" type="text" name="fullName" [(ngModel)]="form.fullName"
+                 placeholder="Nguyễn Văn An" required>
+        </div>
+        <div>
+          <div class="field-label">Email</div>
+          <input class="field-input" type="email" name="email" [(ngModel)]="form.email"
+                 placeholder="ten@vdt.com" autocomplete="off" required>
+        </div>
+        <div>
+          <div class="field-label">Mật khẩu</div>
+          <input class="field-input" type="password" name="password" [(ngModel)]="form.password"
+                 placeholder="Tối thiểu 6 ký tự" autocomplete="new-password" required>
+        </div>
+        <div>
+          <div class="field-label">Vai trò</div>
+          <select class="field-input" name="role" [(ngModel)]="form.role" (ngModelChange)="onFormRoleChange()">
+            @for (r of roleOptions; track r.value) {
+              <option [ngValue]="r.value">{{ r.label }}</option>
+            }
+          </select>
+        </div>
+        @if (needsDept(form.role)) {
+          <div>
+            <div class="field-label">Trung tâm</div>
+            <select class="field-input" name="departmentId" [(ngModel)]="form.departmentId">
+              @for (d of depts(); track d.id) {
+                <option [ngValue]="d.id">{{ d.name }}</option>
+              }
+            </select>
+          </div>
+        } @else if (form.role === 'MANAGER_COMPANY') {
+          <div>
+            <div class="field-label">Công ty</div>
+            <input class="field-input" type="text" value="Công ty Viễn thông số VDT" disabled>
+          </div>
+        }
+        <div class="submit-cell">
+          <button class="btn-primary" type="submit" [disabled]="!formValid() || creating()">
+            @if (creating()) { <span class="spinner"></span> }
+            Tạo tài khoản
+          </button>
+        </div>
+      </form>
+    </div>
+  } @else {
+    <!-- ===== ALERT CONFIGS ===== -->
+    <div class="config-grid">
+      @for (c of configs(); track c.id) {
+        <div class="card config-card" [class.disabled]="!c.enabled">
+          <div class="config-head">
+            <div>
+              <div class="config-level">{{ levelVn[c.documentLevel] }}</div>
+              <div class="config-hint">{{ levelHints[c.documentLevel] }}</div>
+            </div>
+            <label class="toggle" title="Bật/tắt cảnh báo cấp này">
+              <input type="checkbox" name="enabled-{{ c.id }}" [(ngModel)]="c.enabled">
+              <span>{{ c.enabled ? 'Bật' : 'Tắt' }}</span>
+            </label>
+          </div>
+
+          <div class="config-fields">
+            <div>
+              <div class="field-label">Cảnh báo trước (ngày)</div>
+              <input class="field-input" type="number" min="1" max="30"
+                     name="warn-{{ c.id }}" [(ngModel)]="c.warningDays" [disabled]="!c.enabled">
+            </div>
+            <div>
+              <div class="field-label">Leo thang trước (ngày)</div>
+              <input class="field-input" type="number" min="1" max="29"
+                     name="esc-{{ c.id }}" [(ngModel)]="c.escalateDays" [disabled]="!c.enabled">
+            </div>
+          </div>
+
+          <div class="config-note">
+            Còn ≤ <b class="mono">{{ c.warningDays }}</b> ngày: nhắc chủ sở hữu.
+            Còn ≤ <b class="mono">{{ c.escalateDays }}</b> ngày: báo thêm quản lý cấp trên.
+          </div>
+
+          <button class="btn-primary save" (click)="saveConfig(c)" [disabled]="savingConfig() === c.id">
+            @if (savingConfig() === c.id) { <span class="spinner"></span> }
+            Lưu ngưỡng
+          </button>
+        </div>
+      } @empty {
+        <div class="card empty-card">Không tải được cấu hình ngưỡng.
+          <button class="btn-ghost" (click)="loadConfigs()">Thử lại</button>
+        </div>
+      }
+    </div>
+  }
+</div>
