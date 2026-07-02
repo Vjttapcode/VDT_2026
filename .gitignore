@@ -12,3 +12,6 @@ frontend/.angular/
 # Uploads & env
 uploads/
 .env
+# Agents & Tools
+.claude
+.agents
