@@ -29,8 +29,17 @@ export class AlertLogPage implements OnInit {
     return map;
   });
 
-  readonly sentCount = computed(() => this.noti.logs().filter(l => l.status === 'SENT').length);
-  readonly failedCount = computed(() => this.noti.logs().filter(l => l.status === 'FAILED').length);
+  /** áp ô tìm kiếm chung trên header (tên văn bản / email người nhận) */
+  readonly filteredLogs = computed(() => {
+    const q = this.store.query().trim().toLowerCase();
+    if (!q) return this.noti.logs();
+    return this.noti.logs().filter(l =>
+      this.docTitle(l.documentId).toLowerCase().includes(q) ||
+      l.recipientEmail.toLowerCase().includes(q));
+  });
+
+  readonly sentCount = computed(() => this.filteredLogs().filter(l => l.status === 'SENT').length);
+  readonly failedCount = computed(() => this.filteredLogs().filter(l => l.status === 'FAILED').length);
 
   ngOnInit(): void {
     this.reload();

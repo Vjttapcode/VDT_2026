@@ -22,6 +22,7 @@ export class CalendarPage implements OnInit {
   private readonly thisMonth = new Date().getMonth();
 
   readonly months = computed<MonthCell[]>(() => {
+    const q = this.store.query().trim().toLowerCase();
     const cells: MonthCell[] = Array.from({ length: 12 }, (_, i) => ({
       index: i,
       label: 'Tháng ' + (i + 1),
@@ -29,6 +30,7 @@ export class CalendarPage implements OnInit {
       isCurrent: i === this.thisMonth
     }));
     for (const d of this.store.all()) {
+      if (q && !`${d.title} ${d.code}`.toLowerCase().includes(q)) continue;
       const dt = toDate(d.expiryDate);
       if (dt.getFullYear() !== this.year) continue;
       cells[dt.getMonth()].docs.push({ day: dt.getDate(), doc: d });

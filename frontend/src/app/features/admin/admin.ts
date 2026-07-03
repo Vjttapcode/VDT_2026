@@ -121,7 +121,7 @@ export class AdminPage implements OnInit {
   }
 
   formValid(): boolean {
-    return !!this.form.email.trim() && !!this.form.password && !!this.form.fullName.trim()
+    return !!this.form.email.trim() && this.form.password.length >= 6 && !!this.form.fullName.trim()
       && (!this.needsDept(this.form.role) || this.form.departmentId != null);
   }
 

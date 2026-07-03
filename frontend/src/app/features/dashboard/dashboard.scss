@@ -5,7 +5,10 @@
 .left-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .right-col { display: flex; flex-direction: column; gap: 20px; }
 
-.top-cards { display: grid; grid-template-columns: 1fr 1.25fr; gap: 20px; }
+.top-cards {
+  display: grid; grid-template-columns: 1fr 1.25fr; gap: 20px;
+  > * { min-width: 0; } // chặn grid blowout từ nội dung nowrap bên trong
+}
 
 .pad { padding: 18px 20px; }
 
@@ -36,10 +39,13 @@
 .full { width: 100%; margin-top: 14px; }
 
 /* recent */
-.recent-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2px 18px; }
+.recent-grid {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 2px 18px;
+  > * { min-width: 0; }
+}
 .recent-item {
   display: flex; align-items: center; gap: 9px; padding: 6px 4px;
-  border-radius: 7px; cursor: pointer;
+  border-radius: 7px; cursor: pointer; min-width: 0;
   .rname { font-size: 12px; color: #3A4250; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 .ric {
@@ -160,4 +166,13 @@
 @media (max-width: 860px) {
   .top-cards { grid-template-columns: 1fr; }
   .right-col { flex-direction: column; }
+  /* bảng cuộn ngang TRONG card */
+  .table-card { overflow-x: auto; }
+  .tgrid { min-width: 640px; }
+}
+@media (max-width: 560px) {
+  .dark-card { flex-direction: column; align-items: stretch; }
+  .dark-right { width: 100%; }
+  .recent-grid { grid-template-columns: 1fr; }
+  .bars { gap: 3px; }
 }

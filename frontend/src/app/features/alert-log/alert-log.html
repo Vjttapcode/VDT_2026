@@ -1,6 +1,6 @@
 <div class="card table-card">
   <div class="table-head">
-    <span class="tt">Nhật ký cảnh báo · {{ noti.logs().length }}</span>
+    <span class="tt">Nhật ký cảnh báo · {{ filteredLogs().length }}</span>
     <span class="count-pill sent">{{ sentCount() }} đã gửi</span>
     @if (failedCount() > 0) {
       <span class="count-pill failed">{{ failedCount() }} thất bại</span>
@@ -26,7 +26,7 @@
     <span>Ngày gửi</span><span>Văn bản</span><span>Người nhận</span><span>Vai trò</span><span>Phòng ban</span><span>Loại</span><span>Còn</span><span>Kết quả</span>
   </div>
 
-  @for (l of noti.logs(); track l.id) {
+  @for (l of filteredLogs(); track l.id) {
     <div class="tgrid doc-row trow" [class.clickable]="docTitles().has(l.documentId)"
          (click)="openDoc(l.documentId)">
       <span class="mono dim">{{ fmtVn(l.sentDate) }}</span>

@@ -73,3 +73,9 @@
   .thead span:nth-child(5), .trow > span:nth-child(5),
   .thead span:nth-child(7), .trow > span:nth-child(7) { display: none; }
 }
+
+/* mobile: bảng cuộn ngang TRONG card */
+@media (max-width: 640px) {
+  .table-card { overflow-x: auto; }
+  .tgrid { min-width: 540px; }
+}

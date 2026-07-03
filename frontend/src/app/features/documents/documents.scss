@@ -1,5 +1,11 @@
 .table-card { overflow: hidden; }
 
+/* mobile: bảng cuộn ngang TRONG card, không phá bề rộng trang */
+@media (max-width: 860px) {
+  .table-card { overflow-x: auto; }
+  .tgrid { min-width: 720px; }
+}
+
 .table-head {
   display: flex; align-items: center; gap: 8px; padding: 14px 20px;
   border-bottom: 1px solid #F0ECF0; flex-wrap: wrap;
