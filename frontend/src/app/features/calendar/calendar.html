@@ -1,0 +1,34 @@
+<div class="cal-wrap">
+  <div class="cal-head">
+    <span class="tt">Lịch hết hạn năm {{ year }}</span>
+    @if (otherYears() > 0) {
+      <span class="other-note">{{ otherYears() }} văn bản hết hạn ngoài năm {{ year }} (xem ở trang Văn bản)</span>
+    }
+  </div>
+
+  <div class="month-grid">
+    @for (m of months(); track m.index) {
+      <div class="month card" [class.current]="m.isCurrent">
+        <div class="month-head">
+          <span class="month-label">{{ m.label }}</span>
+          @if (m.docs.length > 0) {
+            <span class="month-count mono">{{ m.docs.length }}</span>
+          }
+        </div>
+
+        @if (m.docs.length > 0) {
+          <div class="month-docs">
+            @for (item of m.docs; track item.doc.id) {
+              <div class="doc-row cal-doc" (click)="store.selectedId.set(item.doc.id)">
+                <span class="day mono" [style.background]="item.doc.badgeBg" [style.color]="item.doc.badgeColor">{{ item.day }}</span>
+                <span class="name">{{ item.doc.title }}</span>
+              </div>
+            }
+          </div>
+        } @else {
+          <div class="month-empty">Không có văn bản đến hạn</div>
+        }
+      </div>
+    }
+  </div>
+</div>

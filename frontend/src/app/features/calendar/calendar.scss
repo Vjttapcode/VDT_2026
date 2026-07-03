@@ -1,0 +1,49 @@
+.cal-wrap { display: flex; flex-direction: column; gap: 16px; }
+
+.cal-head {
+  display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap;
+  .tt { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .other-note { font-size: 11.5px; color: var(--muted-2); }
+}
+
+.month-grid {
+  display: grid; grid-template-columns: repeat(4, 1fr); gap: 16px;
+}
+
+.month {
+  padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;
+  min-height: 120px;
+  &.current { box-shadow: 0 0 0 2px var(--red-light); }
+}
+
+.month-head {
+  display: flex; align-items: center; justify-content: space-between;
+  .month-label { font-size: 13px; font-weight: 700; color: var(--ink); }
+  .month-count {
+    font-size: 10.5px; font-weight: 600; color: var(--red);
+    background: #FDECEB; border-radius: 20px; min-width: 20px; height: 20px;
+    display: flex; align-items: center; justify-content: center; padding: 0 6px;
+  }
+}
+
+.month-docs { display: flex; flex-direction: column; gap: 2px; }
+
+.cal-doc {
+  display: flex; align-items: center; gap: 9px;
+  padding: 5px 6px; border-radius: 7px; cursor: pointer;
+  .day {
+    width: 26px; height: 22px; border-radius: 6px; flex: none;
+    font-size: 10.5px; font-weight: 600;
+    display: flex; align-items: center; justify-content: center;
+  }
+  .name {
+    font-size: 12px; color: var(--ink-2);
+    overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+  }
+}
+
+.month-empty { font-size: 11.5px; color: #C9C3CD; }
+
+@media (max-width: 1180px) { .month-grid { grid-template-columns: repeat(3, 1fr); } }
+@media (max-width: 860px)  { .month-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px)  { .month-grid { grid-template-columns: 1fr; } }
