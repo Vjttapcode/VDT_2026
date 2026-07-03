@@ -75,7 +75,7 @@
   <div class="frame-body">
     <!-- ===== SIDEBAR ===== -->
     <aside class="sidebar">
-      @for (n of nav; track n.path) {
+      @for (n of visibleNav(); track n.path) {
         <button class="nav-btn" [class.active]="currentPath() === n.path"
                 [title]="n.label" (click)="go(n.path)">
           @switch (n.icon) {

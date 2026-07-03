@@ -5,15 +5,15 @@ import { DocumentStore, StatusFilter } from '../../core/document-store.service';
 import { DocDrawer } from '../../shared/doc-drawer/doc-drawer';
 import { AddDocModal } from '../../shared/add-doc-modal/add-doc-modal';
 
-interface NavItem { path: string; label: string; icon: string; badge?: boolean; }
+interface NavItem { path: string; label: string; icon: string; badge?: boolean; roles?: string[]; }
 
 const SECTIONS: Record<string, [string, string]> = {
   dashboard: ['TỔNG QUAN · OVERVIEW', 'Bảng điều khiển văn bản'],
   documents: ['VĂN BẢN · DOCUMENTS', 'Toàn bộ văn bản'],
   alerts: ['CẢNH BÁO · ALERTS', 'Văn bản cần xử lý'],
   calendar: ['LỊCH · CALENDAR', 'Lịch hết hạn'],
-  reports: ['BÁO CÁO · REPORTS', 'Báo cáo thống kê'],
-  profile: ['TÀI KHOẢN · PROFILE', 'Hồ sơ người dùng']
+  reports: ['NHẬT KÝ · ALERT LOG', 'Nhật ký cảnh báo'],
+  profile: ['QUẢN TRỊ · ADMIN', 'Quản trị hệ thống']
 };
 
 @Component({
@@ -34,9 +34,14 @@ export class Shell implements OnInit {
     { path: 'documents', label: 'Văn bản', icon: 'doc' },
     { path: 'alerts', label: 'Cảnh báo', icon: 'bell', badge: true },
     { path: 'calendar', label: 'Lịch hết hạn', icon: 'calendar' },
-    { path: 'reports', label: 'Báo cáo', icon: 'chart' },
-    { path: 'profile', label: 'Tài khoản', icon: 'user' }
+    { path: 'reports', label: 'Nhật ký cảnh báo', icon: 'chart' },
+    { path: 'profile', label: 'Quản trị', icon: 'user', roles: ['ADMIN'] }
   ];
+
+  readonly visibleNav = computed(() => {
+    const role = this.auth.user()?.role ?? '';
+    return this.nav.filter(n => !n.roles || n.roles.includes(role));
+  });
 
   readonly currentPath = signal(this.pathOf(this.router.url));
 
