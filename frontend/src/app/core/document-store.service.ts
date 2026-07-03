@@ -200,7 +200,7 @@ export class DocumentStore {
   }
 
   private errText(err: HttpErrorResponse, fallback: string): string {
-    if (err.status === 0) return 'Không kết nối được máy chủ — kiểm tra backend đang chạy';
+    if (err.status === 0) return 'Không kết nối được máy chủ, kiểm tra backend đang chạy';
     const body = err.error;
     if (typeof body === 'string' && body) return body;
     return body?.message ?? body?.error ?? fallback;

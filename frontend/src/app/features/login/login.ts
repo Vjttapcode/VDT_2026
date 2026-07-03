@@ -41,7 +41,7 @@ export class LoginPage {
         this.error.set(err.status === 401 || err.status === 400
           ? 'Email hoặc mật khẩu không đúng'
           : err.status === 0
-            ? 'Không kết nối được máy chủ — kiểm tra backend đang chạy'
+            ? 'Không kết nối được máy chủ, kiểm tra backend đang chạy'
             : err.error?.message ?? 'Đăng nhập thất bại, thử lại sau');
       }
     });

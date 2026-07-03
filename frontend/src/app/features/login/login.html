@@ -27,7 +27,7 @@
     </form>
 
     <div class="demo">
-      <div class="demo-title">Tài khoản demo — mật khẩu: <span class="mono">password</span></div>
+      <div class="demo-title">Tài khoản demo, mật khẩu: <span class="mono">password</span></div>
       @for (acc of demoAccounts; track acc.email) {
         <button type="button" class="demo-acc" (click)="useDemo(acc.email)">
           <span class="mono email">{{ acc.email }}</span>
