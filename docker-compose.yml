@@ -110,6 +110,17 @@ services:
       start_period: 40s
     networks: [app-network]
 
+  frontend:
+    build: ./frontend
+    # không expose port ra host — gateway nginx proxy vào
+    healthcheck:
+      # dung 127.0.0.1 (khong dung localhost): busybox wget uu tien ::1 trong khi nginx listen IPv4
+      test: ["CMD", "wget", "-q", "--spider", "http://127.0.0.1:80"]
+      interval: 10s
+      timeout: 3s
+      retries: 5
+    networks: [app-network]
+
   nginx:
     image: nginx:alpine
     ports:
@@ -123,6 +134,8 @@ services:
       document-service:
         condition: service_healthy
       notification-service:
+        condition: service_healthy
+      frontend:
         condition: service_healthy
     networks: [app-network]
 
