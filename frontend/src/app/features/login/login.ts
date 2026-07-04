@@ -1,5 +1,6 @@
 import { Component, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
+import { Title } from '@angular/platform-browser';
 import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 
@@ -12,6 +13,10 @@ import { AuthService } from '../../core/auth.service';
 export class LoginPage {
   private auth = inject(AuthService);
   private router = inject(Router);
+
+  constructor() {
+    inject(Title).setTitle('Đăng nhập · VB Quản lý văn bản');
+  }
 
   email = 'admin@vdt.com';
   password = '';

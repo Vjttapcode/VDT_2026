@@ -3,7 +3,7 @@
     <div class="modal" (click)="$event.stopPropagation()">
       <div class="modal-head">
         <span>Thêm văn bản mới</span>
-        <button class="x" (click)="close()">✕</button>
+        <button class="x" (click)="close()" aria-label="Đóng">✕</button>
       </div>
 
       <form class="modal-body" (ngSubmit)="submit()">
