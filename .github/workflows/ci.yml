@@ -97,4 +97,12 @@ jobs:
             git fetch origin main
             git reset --hard origin/main
             docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --build --remove-orphans
+            # nginx.conf là bind-mount: đổi nội dung file KHÔNG làm compose recreate container,
+            # mà nginx chỉ đọc config lúc khởi động -> luôn ép tạo lại gateway (rẻ, ~2s)
+            docker compose -f docker-compose.yml -f docker-compose.prod.yml up -d --force-recreate nginx
             docker image prune -f
+            # health-check: job phải ĐỎ nếu site không lên thật sự (tránh deploy "xanh" mà chết)
+            sleep 10
+            curl -fsS http://localhost/ -o /dev/null
+            curl -fsS http://localhost/api/notifications/alert-logs -o /dev/null
+            echo "healthcheck OK: UI + API deu phan hoi"
