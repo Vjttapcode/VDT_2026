@@ -40,6 +40,47 @@ button { cursor: pointer; }
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes popIn { from { opacity: 0; transform: translateY(8px) scale(.98); } to { opacity: 1; transform: translateY(0) scale(1); } }
 @keyframes spin { to { transform: rotate(360deg); } }
+@keyframes shimmer { from { background-position: 200% 0; } to { background-position: -200% 0; } }
+
+/* a11y: focus ring cho điều hướng bàn phím */
+:focus-visible {
+  outline: 2px solid var(--red-light);
+  outline-offset: 2px;
+}
+
+/* a11y: tôn trọng cài đặt giảm chuyển động của hệ điều hành */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* skeleton loader dùng chung */
+.skel {
+  display: inline-block;
+  height: 12px;
+  width: 70%;
+  border-radius: 6px;
+  background: linear-gradient(90deg, #F0EDF0 25%, #FAF8FA 50%, #F0EDF0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.4s ease infinite;
+}
+.skel-row { border-top: 1px solid #F4F0F4; }
+
+/* empty state dùng chung */
+.empty-state {
+  padding: 40px 20px;
+  text-align: center;
+  display: flex; flex-direction: column; align-items: center; gap: 12px;
+  .es-icon {
+    width: 46px; height: 46px; border-radius: 13px; background: #F5F2F5;
+    display: flex; align-items: center; justify-content: center;
+    svg { width: 20px; height: 20px; stroke: #C9C3CD; }
+  }
+  .es-text { font-size: 13px; color: var(--muted-2); }
+}
 
 /* ===== shared building blocks ===== */
 .card {

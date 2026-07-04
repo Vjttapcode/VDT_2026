@@ -1,4 +1,5 @@
 import { Component, HostListener, OnInit, computed, inject, signal } from '@angular/core';
+import { Title } from '@angular/platform-browser';
 import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { DocumentStore, StatusFilter } from '../../core/document-store.service';
@@ -67,9 +68,20 @@ export class Shell implements OnInit {
 
   readonly isFiltering = computed(() => this.store.statusFilter() !== 'all' || !!this.store.query().trim());
 
+  private readonly titleSrv = inject(Title);
+
   ngOnInit(): void {
     this.store.load();
-    this.router.events.subscribe(() => this.currentPath.set(this.pathOf(this.router.url)));
+    this.updateTitle();
+    this.router.events.subscribe(() => {
+      this.currentPath.set(this.pathOf(this.router.url));
+      this.updateTitle();
+    });
+  }
+
+  private updateTitle(): void {
+    const section = SECTIONS[this.pathOf(this.router.url)];
+    this.titleSrv.setTitle(`${section?.[1] ?? 'VB'} · VB Quản lý văn bản`);
   }
 
   @HostListener('document:keydown.escape')
@@ -78,6 +90,14 @@ export class Shell implements OnInit {
     this.store.showAdd.set(false);
     this.store.showNotif.set(false);
     this.showUserMenu.set(false);
+  }
+
+  /** đóng dropdown khi click ra ngoài vùng chuông / avatar */
+  @HostListener('document:click', ['$event'])
+  onDocClick(event: Event): void {
+    const target = event.target as HTMLElement;
+    if (!target.closest('.notif-wrap')) this.store.showNotif.set(false);
+    if (!target.closest('.user-wrap')) this.showUserMenu.set(false);
   }
 
   go(path: string): void {

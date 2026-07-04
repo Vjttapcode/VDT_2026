@@ -47,7 +47,8 @@
           <button class="chip" [class.on]="store.statusFilter() === c.key"
                   (click)="store.statusFilter.set(c.key)">{{ c.label }}</button>
         }
-        <button class="chip sort" (click)="cycleSort()">⇅ {{ sortLabels[store.sortBy()] }}</button>
+        <button class="chip sort" (click)="cycleSort()"
+                title="Bấm để đổi thứ tự sắp xếp: Mức khẩn → Tên A-Z → Loại">⇅ {{ sortLabels[store.sortBy()] }}</button>
       </div>
 
       <div class="tgrid thead">
@@ -67,9 +68,30 @@
           <span><span class="status-pill" [style.background]="d.badgeBg" [style.color]="d.badgeColor">{{ d.statusVn }}</span></span>
         </div>
       } @empty {
-        <div class="empty">
-          @if (store.loading()) { Đang tải dữ liệu… } @else { Không có văn bản phù hợp. }
-        </div>
+        @if (store.loading()) {
+          @for (i of [1, 2, 3]; track i) {
+            <div class="tgrid skel-row">
+              <span class="skel" style="width:85%"></span>
+              <span class="skel"></span>
+              <span class="skel" style="width:60%"></span>
+              <span class="skel"></span>
+              <span class="skel" style="width:80%"></span>
+              <span class="skel" style="width:55%"></span>
+            </div>
+          }
+        } @else if (store.query().trim() || store.statusFilter() !== 'all') {
+          <div class="empty-state">
+            <span class="es-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg></span>
+            <span class="es-text">Không có văn bản khớp bộ lọc hiện tại.</span>
+            <button class="btn-ghost" (click)="store.query.set(''); store.statusFilter.set('all')">Xóa lọc</button>
+          </div>
+        } @else {
+          <div class="empty-state">
+            <span class="es-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
+            <span class="es-text">Chưa có văn bản nào trong hệ thống.</span>
+            <button class="btn-primary" (click)="store.showAdd.set(true)">+ Thêm văn bản đầu tiên</button>
+          </div>
+        }
       }
     </div>
   </div>
