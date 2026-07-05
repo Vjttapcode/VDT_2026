@@ -35,11 +35,19 @@ public class JwtUtil {
     }
 
     public String generateToken(User user) {
+        return generateToken(user, user.getCompanyId());
+    }
+
+    /**
+     * Cho phép truyền companyId đã suy ra (USER/MANAGER_CENTER lấy company của phòng ban)
+     * để token luôn mang phạm vi công ty — phục vụ lọc dữ liệu theo cấp Công ty.
+     */
+    public String generateToken(User user, Long companyId) {
         Map<String, Object> claims = new HashMap<>();
         claims.put("userId", user.getId());
         claims.put("role", user.getRole().name());
         claims.put("departmentId", user.getDepartmentId()); // nullable
-        claims.put("companyId", user.getCompanyId());        // nullable
+        claims.put("companyId", companyId);                  // nullable, có thể suy từ phòng ban
 
         Date now = new Date();
         Date expiry = new Date(now.getTime() + expirationMs);

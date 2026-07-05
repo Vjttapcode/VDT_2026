@@ -11,17 +11,21 @@ import com.vdt.auth_service.dto.UserDto;
 import com.vdt.auth_service.entity.Role;
 import com.vdt.auth_service.entity.User;
 import com.vdt.auth_service.exception.BusinessException;
+import com.vdt.auth_service.repository.DepartmentRepository;
 import com.vdt.auth_service.repository.UserRepository;
 import com.vdt.auth_service.security.JwtUtil;
 
 @Service
 public class AuthService {
     private final UserRepository userRepo;
+    private final DepartmentRepository departmentRepo;
     private final PasswordEncoder encoder;
     private final JwtUtil jwtUtil;
 
-    public AuthService(UserRepository userRepo, PasswordEncoder encoder, JwtUtil jwtUtil){
+    public AuthService(UserRepository userRepo, DepartmentRepository departmentRepo,
+            PasswordEncoder encoder, JwtUtil jwtUtil){
         this.userRepo = userRepo;
+        this.departmentRepo = departmentRepo;
         this.encoder = encoder;
         this.jwtUtil = jwtUtil;
     }
@@ -35,9 +39,25 @@ public class AuthService {
         if(!encoder.matches(req.password(), user.getPasswordHash())){
             throw new BusinessException("Email hoặc mật khẩu không đúng");
         }
-        String token = jwtUtil.generateToken(user);
+        Long companyId = resolveCompanyId(user);
+        String token = jwtUtil.generateToken(user, companyId);
         return new LoginResponse(token, user.getId(), user.getEmail(), user.getFullName(),
-                user.getRole().name(), user.getDepartmentId(), user.getCompanyId());
+                user.getRole().name(), user.getDepartmentId(), companyId);
+    }
+
+    /**
+     * Phạm vi công ty hiệu lực của user:
+     *   - MANAGER_COMPANY: đã có company_id sẵn.
+     *   - USER / MANAGER_CENTER: suy từ công ty của phòng ban (departments.company_id).
+     *   - ADMIN: null (không thuộc công ty nào).
+     */
+    private Long resolveCompanyId(User user){
+        if(user.getCompanyId() != null) return user.getCompanyId();
+        if(user.getDepartmentId() != null)
+            return departmentRepo.findById(user.getDepartmentId())
+                    .map(d -> d.getCompany().getId())
+                    .orElse(null);
+        return null;
     }
 
     public UserDto register(RegisterRequest req){
