@@ -27,9 +27,90 @@ export interface DocumentDto {
   expiryDate: string;
   filePath: string | null;
   renewalCount: number;
+  supersedesId: number | null;
   createdAt: string;
   updatedAt: string;
 }
+
+export type RelationType = 'REPLACE' | 'REPEAL' | 'AMEND';
+export type RelationDirection = 'OUTGOING' | 'INCOMING';
+
+/** Một quan hệ nghiệp vụ của văn bản (đã resolve chiều + văn bản đối tác). */
+export interface DocRelation {
+  id: number;
+  type: RelationType;
+  direction: RelationDirection;
+  otherDocId: number;
+  otherDocTitle: string | null;
+  createdAt: string;
+}
+
+export const REL_TYPE_VN: Record<RelationType, string> = {
+  REPLACE: 'Thay thế',
+  REPEAL: 'Bãi bỏ',
+  AMEND: 'Sửa đổi/bổ sung'
+};
+
+export const REL_TYPE_COLOR: Record<RelationType, string> = {
+  REPLACE: '#7A5AF0',
+  REPEAL: '#C62B26',
+  AMEND: '#3B6BB5'
+};
+
+/** Nhãn quan hệ theo chiều: [OUTGOING, INCOMING]. */
+export const REL_DIRECTION_VN: Record<RelationType, Record<RelationDirection, string>> = {
+  REPLACE: { OUTGOING: 'Thay thế cho', INCOMING: 'Bị thay thế bởi' },
+  REPEAL: { OUTGOING: 'Bãi bỏ', INCOMING: 'Bị bãi bỏ bởi' },
+  AMEND: { OUTGOING: 'Sửa đổi/bổ sung cho', INCOMING: 'Được sửa đổi/bổ sung bởi' }
+};
+
+export type AuditAction = 'CREATE' | 'UPDATE' | 'SUBMIT' | 'APPROVE' | 'REJECT' | 'RENEW' | 'REPLACE' | 'REPEAL' | 'AMEND';
+
+/** Một dòng lịch sử thay đổi (audit log) của văn bản. */
+export interface AuditLog {
+  id: number;
+  action: AuditAction;
+  actorId: number | null;
+  actorName: string | null;
+  comment: string | null;
+  changes: string | null;   // JSON {field: {old, new}}
+  createdAt: string;
+}
+
+export const AUDIT_ACTION_VN: Record<AuditAction, string> = {
+  CREATE: 'Tạo mới',
+  UPDATE: 'Chỉnh sửa',
+  SUBMIT: 'Gửi duyệt',
+  APPROVE: 'Phê duyệt',
+  REJECT: 'Từ chối',
+  RENEW: 'Gia hạn',
+  REPLACE: 'Thay thế',
+  REPEAL: 'Bãi bỏ',
+  AMEND: 'Sửa đổi/bổ sung'
+};
+
+/** Màu chấm mốc thời gian theo loại hành động. */
+export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
+  CREATE: '#3B6BB5',
+  UPDATE: '#9A6400',
+  SUBMIT: '#3B6BB5',
+  APPROVE: '#1E8E5A',
+  REJECT: '#C62B26',
+  RENEW: '#1E8E5A',
+  REPLACE: '#7A5AF0',
+  REPEAL: '#C62B26',
+  AMEND: '#3B6BB5'
+};
+
+/** Nhãn tiếng Việt cho các trường trong diff changes. */
+export const FIELD_VN: Record<string, string> = {
+  title: 'Tiêu đề',
+  description: 'Mô tả',
+  type: 'Loại văn bản',
+  level: 'Cấp áp dụng',
+  expiryDate: 'Ngày hết hạn',
+  supersedesId: 'Văn bản thay thế'
+};
 
 export interface DashboardStats {
   active: number;

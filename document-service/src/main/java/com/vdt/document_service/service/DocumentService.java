@@ -11,6 +11,7 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Objects;
 import java.util.Set;
 import java.util.UUID;
 import java.util.stream.Collectors;
@@ -23,18 +24,23 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vdt.document_service.client.AuthClient;
+import com.vdt.document_service.dto.AuditLogDto;
 import com.vdt.document_service.dto.DashboardStatsDto;
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
 import com.vdt.document_service.dto.ExpiringDocumentDto;
+import com.vdt.document_service.dto.RelationDto;
 import com.vdt.document_service.entity.ApprovalRequest;
 import com.vdt.document_service.entity.Document;
+import com.vdt.document_service.entity.DocumentRelation;
 import com.vdt.document_service.entity.DocumentStatus;
 import com.vdt.document_service.entity.NotificationOutbox;
+import com.vdt.document_service.entity.RelationType;
 import com.vdt.document_service.exception.BusinessException;
 import com.vdt.document_service.exception.ForbiddenException;
 import com.vdt.document_service.exception.NotFoundException;
 import com.vdt.document_service.repository.ApprovalRequestRepository;
+import com.vdt.document_service.repository.DocumentRelationRepository;
 import com.vdt.document_service.repository.DocumentRepository;
 import com.vdt.document_service.repository.NotificationOutboxRepository;
 import com.vdt.document_service.util.SecurityUtil;
@@ -45,6 +51,7 @@ public class DocumentService {
     private final DocumentRepository repo;
     private final ApprovalRequestRepository approvalRepo;
     private final NotificationOutboxRepository outboxRepo;
+    private final DocumentRelationRepository relationRepo;
     private final ObjectMapper objectMapper;
     private final String uploadDir;
     private final AuthClient authClient;
@@ -57,11 +64,13 @@ public class DocumentService {
     private static final Set<DocumentStatus> ALERTABLE = Set.of(DocumentStatus.WARNING, DocumentStatus.EXPIRED);
 
     public DocumentService(DocumentRepository repo, ApprovalRequestRepository approvalRepo,
-        NotificationOutboxRepository outboxRepo, ObjectMapper objectMapper,
+        NotificationOutboxRepository outboxRepo, DocumentRelationRepository relationRepo,
+        ObjectMapper objectMapper,
         @Value("${app.upload-dir:uploads}") String uploadDir, AuthClient authClient) {
         this.repo = repo;
         this.approvalRepo = approvalRepo;
         this.outboxRepo = outboxRepo;
+        this.relationRepo = relationRepo;
         this.objectMapper = objectMapper;
         this.uploadDir = uploadDir;
         this.authClient = authClient;
@@ -105,7 +114,9 @@ public class DocumentService {
                 .expiryDate(req.expiryDate())
                 .renewalCount(0)
                 .build();
-        return DocumentResponse.from(repo.save(doc));
+        Document saved = repo.save(doc);
+        saveLog(saved.getId(), "CREATE", userId, null, "Tạo văn bản");   // ai tạo + thời điểm tạo
+        return DocumentResponse.from(saved, authClient.getName(userId));
     }
 
     @Transactional
@@ -114,21 +125,39 @@ public class DocumentService {
         assertOwner(doc);                              // chỉ chủ sở hữu sửa
         if (doc.getStatus() != DocumentStatus.DRAFT && doc.getStatus() != DocumentStatus.REJECTED)
             throw new ForbiddenException("Chỉ sửa được văn bản ở trạng thái DRAFT/REJECTED");
+
+        // gom diff giá trị trước/sau trước khi ghi đè
+        Map<String, Object> changes = new LinkedHashMap<>();
+        if (!Objects.equals(doc.getTitle(), req.title()))
+            changes.put("title", pair(doc.getTitle(), req.title()));
+        if (!Objects.equals(doc.getDescription(), req.description()))
+            changes.put("description", pair(doc.getDescription(), req.description()));
+        if (doc.getType() != req.type())
+            changes.put("type", pair(doc.getType().name(), req.type().name()));
+        if (doc.getLevel() != req.level())
+            changes.put("level", pair(doc.getLevel().name(), req.level().name()));
+        if (!Objects.equals(doc.getExpiryDate(), req.expiryDate()))
+            changes.put("expiryDate", pair(str(doc.getExpiryDate()), str(req.expiryDate())));
+
         doc.setTitle(req.title());
         doc.setDescription(req.description());
         doc.setType(req.type());
         doc.setLevel(req.level());
         doc.setExpiryDate(req.expiryDate());
-        return DocumentResponse.from(repo.save(doc));
+        Document saved = repo.save(doc);
+        if (!changes.isEmpty())   // chỉ ghi log khi thực sự có thay đổi
+            saveLog(saved.getId(), "UPDATE", SecurityUtil.currentUserId(), null, "Sửa văn bản", toJson(changes));
+        return DocumentResponse.from(saved, authClient.getName(saved.getOwnerId()));
     }
 
     @Transactional
     public void delete(Long id) {
         Document doc = findOrThrow(id);
         assertOwner(doc);
-        // approval_requests / notification_outbox tham chiếu documents không có ON DELETE CASCADE
+        // approval_requests / notification_outbox / document_relations tham chiếu documents không có ON DELETE CASCADE
         approvalRepo.deleteByDocumentId(id);
         outboxRepo.deleteByDocumentId(id);
+        relationRepo.deleteByFromDocIdOrToDocId(id, id);
         repo.delete(doc);
     }
 
@@ -178,13 +207,94 @@ public class DocumentService {
         if (!canRenew(doc))
             throw new ForbiddenException("Không đủ quyền gia hạn văn bản này");
 
+        LocalDate oldExpiry = doc.getExpiryDate();
         doc.setExpiryDate(newExpiryDate);
         doc.setStatus(DocumentStatus.ACTIVE);
         doc.setRenewalCount(doc.getRenewalCount() + 1);
         repo.save(doc);
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("expiryDate", pair(str(oldExpiry), str(newExpiryDate)));
         saveLog(doc.getId(), "RENEW", SecurityUtil.currentUserId(), null,
-                "Gia hạn lần " + doc.getRenewalCount() + " đến " + newExpiryDate);
-        return DocumentResponse.from(doc);
+                "Gia hạn lần " + doc.getRenewalCount() + " đến " + newExpiryDate, toJson(changes));
+        return DocumentResponse.from(doc, authClient.getName(doc.getOwnerId()));
+    }
+
+    /**
+     * Tạo quan hệ nghiệp vụ: văn bản {id} {type} văn bản {targetId}; ghi audit 2 chiều.
+     * REPLACE/REPEAL → văn bản cũ (target) mất hiệu lực (ACTIVE/WARNING chuyển EXPIRED).
+     * REPLACE → đồng thời set supersedes_id (giữ tương thích V5). AMEND → chỉ liên kết, không đổi trạng thái.
+     */
+    @Transactional
+    public DocumentResponse relate(Long id, Long targetId, RelationType type) {
+        if (id.equals(targetId))
+            throw new BusinessException("Văn bản không thể tự liên kết với chính nó");
+        Document doc = findOrThrow(id);
+        Document target = findOrThrow(targetId);
+        if (!canRenew(doc))   // cùng quyền như gia hạn: chủ sở hữu / admin / manager trong phạm vi
+            throw new ForbiddenException("Không đủ quyền tạo quan hệ cho văn bản này");
+        assertCanView(target);
+        if (relationRepo.existsByFromDocIdAndToDocIdAndRelationType(id, targetId, type))
+            throw new BusinessException("Quan hệ này đã tồn tại");
+
+        Long actor = SecurityUtil.currentUserId();
+        relationRepo.save(DocumentRelation.builder()
+                .fromDocId(id).toDocId(targetId).relationType(type).createdBy(actor).build());
+
+        // audit phía văn bản tác động (from); REPLACE ghi kèm supersedes_id để tương thích V5
+        String fromChanges = null;
+        if (type == RelationType.REPLACE) {
+            doc.setSupersedesId(targetId);
+            repo.save(doc);
+            fromChanges = toJson(oneChange("supersedesId", null, targetId));
+        }
+        saveLog(id, type.name(), actor, null, fromLabel(type) + " văn bản #" + targetId, fromChanges);
+
+        // REPLACE/REPEAL: văn bản cũ mất hiệu lực + ghi diff trạng thái vào audit phía to
+        String toChanges = null;
+        if (type != RelationType.AMEND
+                && (target.getStatus() == DocumentStatus.ACTIVE || target.getStatus() == DocumentStatus.WARNING)) {
+            DocumentStatus oldStatus = target.getStatus();
+            target.setStatus(DocumentStatus.EXPIRED);
+            repo.save(target);
+            toChanges = toJson(oneChange("status", oldStatus.name(), DocumentStatus.EXPIRED.name()));
+        }
+        saveLog(targetId, type.name(), actor, null, toLabel(type) + " văn bản #" + id, toChanges);
+
+        return DocumentResponse.from(doc, authClient.getName(doc.getOwnerId()));
+    }
+
+    /** Endpoint /replace cũ — ủy quyền sang relate() với quan hệ REPLACE. */
+    @Transactional
+    public DocumentResponse replace(Long id, Long supersededId) {
+        return relate(id, supersededId, RelationType.REPLACE);
+    }
+
+    /** Lịch sử thay đổi (audit log) của một văn bản — mới nhất trước. */
+    @Transactional(readOnly = true)
+    public List<AuditLogDto> history(Long id) {
+        Document doc = findOrThrow(id);
+        assertCanView(doc);
+        Map<Long, String> nameCache = new HashMap<>();
+        return approvalRepo.findByDocumentIdOrderByCreatedAtDesc(id).stream()
+                .map(a -> {
+                    Long actorId = a.getReviewerId() != null ? a.getReviewerId() : a.getRequesterId();
+                    String name = actorId == null ? null : nameCache.computeIfAbsent(actorId, authClient::getName);
+                    return AuditLogDto.from(a, name);
+                }).toList();
+    }
+
+    /** Danh sách quan hệ của một văn bản (cả 2 chiều), đã resolve văn bản đối tác. */
+    @Transactional(readOnly = true)
+    public List<RelationDto> relations(Long id) {
+        Document doc = findOrThrow(id);
+        assertCanView(doc);
+        return relationRepo.findByDoc(id).stream().map(r -> {
+            boolean outgoing = r.getFromDocId().equals(id);
+            Long otherId = outgoing ? r.getToDocId() : r.getFromDocId();
+            String otherTitle = repo.findById(otherId).map(Document::getTitle).orElse(null);
+            return new RelationDto(r.getId(), r.getRelationType().name(),
+                    outgoing ? "OUTGOING" : "INCOMING", otherId, otherTitle, r.getCreatedAt());
+        }).toList();
     }
 
     @Transactional
@@ -309,10 +419,58 @@ public class DocumentService {
     }
 
     private void saveLog(Long docId, String action, Long requesterId, Long reviewerId, String comment) {
+        saveLog(docId, action, requesterId, reviewerId, comment, null);
+    }
+
+    private void saveLog(Long docId, String action, Long requesterId, Long reviewerId, String comment, String changes) {
         approvalRepo.save(ApprovalRequest.builder()
                 .documentId(docId).action(action)
                 .requesterId(requesterId).reviewerId(reviewerId)
-                .comment(comment).build());
+                .comment(comment).changes(changes).build());
+    }
+
+    /** {old,new} — dùng LinkedHashMap để chấp nhận giá trị null. */
+    private Map<String, Object> pair(Object oldV, Object newV) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("old", oldV);
+        m.put("new", newV);
+        return m;
+    }
+
+    /** Bọc một trường thay đổi thành {field: {old, new}}. */
+    private Map<String, Object> oneChange(String field, Object oldV, Object newV) {
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put(field, pair(oldV, newV));
+        return m;
+    }
+
+    private String str(LocalDate d) { return d == null ? null : d.toString(); }
+
+    /** Nhãn audit phía văn bản tác động (from). */
+    private String fromLabel(RelationType t) {
+        return switch (t) {
+            case REPLACE -> "Thay thế";
+            case REPEAL  -> "Bãi bỏ";
+            case AMEND   -> "Sửa đổi/bổ sung";
+        };
+    }
+
+    /** Nhãn audit phía văn bản bị tác động (to). */
+    private String toLabel(RelationType t) {
+        return switch (t) {
+            case REPLACE -> "Được thay thế bởi";
+            case REPEAL  -> "Bị bãi bỏ bởi";
+            case AMEND   -> "Được sửa đổi/bổ sung bởi";
+        };
+    }
+
+    private String toJson(Map<String, Object> changes) {
+        if (changes == null || changes.isEmpty()) return null;
+        try {
+            return objectMapper.writeValueAsString(changes);
+        } catch (JsonProcessingException e) {
+            throw new BusinessException("Không tạo được nội dung audit changes");
+        }
     }
 
     private void enqueue(Document doc, String eventType, String recipientRole, String reason){

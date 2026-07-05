@@ -15,11 +15,15 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import com.vdt.document_service.dto.AuditLogDto;
 import com.vdt.document_service.dto.DashboardStatsDto;
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
 import com.vdt.document_service.dto.RejectRequest;
+import com.vdt.document_service.dto.RelateRequest;
+import com.vdt.document_service.dto.RelationDto;
 import com.vdt.document_service.dto.RenewRequest;
+import com.vdt.document_service.dto.ReplaceRequest;
 import com.vdt.document_service.service.DocumentService;
 
 import jakarta.validation.Valid;
@@ -64,6 +68,26 @@ public class DocumentController {
     @PostMapping("/{id}/renew")
     public DocumentResponse renew(@PathVariable Long id, @Valid @RequestBody RenewRequest body) {
         return service.renew(id, body.newExpiryDate());
+    }
+
+    @PostMapping("/{id}/replace")
+    public DocumentResponse replace(@PathVariable Long id, @Valid @RequestBody ReplaceRequest body) {
+        return service.replace(id, body.supersededId());
+    }
+
+    @PostMapping("/{id}/relate")
+    public DocumentResponse relate(@PathVariable Long id, @Valid @RequestBody RelateRequest body) {
+        return service.relate(id, body.targetId(), body.type());
+    }
+
+    @GetMapping("/{id}/relations")
+    public List<RelationDto> relations(@PathVariable Long id) {
+        return service.relations(id);
+    }
+
+    @GetMapping("/{id}/history")
+    public List<AuditLogDto> history(@PathVariable Long id) {
+        return service.history(id);
     }
 
     @PostMapping("/{id}/upload")

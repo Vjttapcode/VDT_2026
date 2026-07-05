@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
@@ -16,32 +18,26 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
-@Table(name = "approval_requests")
+@Table(name = "document_relations")
 @Getter @Setter @NoArgsConstructor @AllArgsConstructor @Builder
-public class ApprovalRequest {
+public class DocumentRelation {
 
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(name = "document_id", nullable = false)
-    private Long documentId;
+    @Column(name = "from_doc_id", nullable = false)
+    private Long fromDocId;   // văn bản tác động (mới)
 
-    @Column(nullable = false, length = 20)
-    private String action;   // CREATE | UPDATE | SUBMIT | APPROVE | REJECT | RENEW | REPLACE (dùng String, validate ở service)
+    @Column(name = "to_doc_id", nullable = false)
+    private Long toDocId;     // văn bản bị tác động (cũ)
 
-    @Column(name = "requester_id")
-    private Long requesterId;
+    @Enumerated(EnumType.STRING)
+    @Column(name = "relation_type", nullable = false, length = 20)
+    private RelationType relationType;
 
-    @Column(name = "reviewer_id")
-    private Long reviewerId;
-
-    @Column(columnDefinition = "text")
-    private String comment;
-
-    /** JSON {field: {old, new}} — giá trị trước/sau khi sửa (null nếu không áp dụng). */
-    @Column(columnDefinition = "text")
-    private String changes;
+    @Column(name = "created_by")
+    private Long createdBy;
 
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;

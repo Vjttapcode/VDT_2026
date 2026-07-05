@@ -3,8 +3,8 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
-  DashboardStats, DEPT_VN, DocStatus, DocType, DocLevel, DocumentDto, DocView,
-  daysFromToday, daysText, fmtDate, fmtIso, STATUS_THEME, toDate, TYPE_CODE, TYPE_THEME, TYPE_VN, LEVEL_VN
+  AuditLog, DashboardStats, DEPT_VN, DocRelation, DocStatus, DocType, DocLevel, DocumentDto, DocView,
+  RelationType, daysFromToday, daysText, fmtDate, fmtIso, STATUS_THEME, toDate, TYPE_CODE, TYPE_THEME, TYPE_VN, LEVEL_VN
 } from './models';
 
 const API = '/api/documents';
@@ -29,6 +29,13 @@ export class DocumentStore {
   readonly stats = signal<DashboardStats | null>(null);
   readonly loading = signal(false);
   readonly loadError = signal<string | null>(null);
+
+  /* ===== lịch sử thay đổi (audit log) của văn bản đang mở ===== */
+  readonly history = signal<AuditLog[]>([]);
+  readonly historyLoading = signal(false);
+
+  /* ===== quan hệ nghiệp vụ (thay thế/bãi bỏ/sửa đổi) của văn bản đang mở ===== */
+  readonly relations = signal<DocRelation[]>([]);
 
   /* ===== ui state ===== */
   readonly query = signal('');
@@ -192,6 +199,37 @@ export class DocumentStore {
     this.http.post<DocumentDto>(`${API}/${id}/reject`, { reason }).subscribe({
       next: () => this.afterMutation(id, 'Đã từ chối văn bản'),
       error: err => this.toast('err', this.errText(err, 'Không từ chối được'))
+    });
+  }
+
+  /** Tải lịch sử thay đổi của một văn bản — dùng cho drawer chi tiết. */
+  loadHistory(id: number): void {
+    this.historyLoading.set(true);
+    this.history.set([]);
+    this.http.get<AuditLog[]>(`${API}/${id}/history`).subscribe({
+      next: h => { this.history.set(h); this.historyLoading.set(false); },
+      error: () => { this.historyLoading.set(false); }
+    });
+  }
+
+  /** Tải danh sách quan hệ nghiệp vụ của một văn bản. */
+  loadRelations(id: number): void {
+    this.http.get<DocRelation[]>(`${API}/${id}/relations`).subscribe({
+      next: r => this.relations.set(r),
+      error: () => this.relations.set([])
+    });
+  }
+
+  /** Tạo quan hệ: văn bản {id} {type} cho văn bản {targetId}. */
+  relate(id: number, targetId: number, type: RelationType): void {
+    const okText: Record<RelationType, string> = {
+      REPLACE: 'Đã đánh dấu thay thế văn bản',
+      REPEAL: 'Đã đánh dấu bãi bỏ văn bản',
+      AMEND: 'Đã đánh dấu sửa đổi/bổ sung văn bản'
+    };
+    this.http.post<DocumentDto>(`${API}/${id}/relate`, { targetId, type }).subscribe({
+      next: () => { this.afterMutation(id, okText[type]); this.loadHistory(id); this.loadRelations(id); },
+      error: err => this.toast('err', this.errText(err, 'Không tạo được quan hệ văn bản'))
     });
   }
 

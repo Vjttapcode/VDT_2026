@@ -27,6 +27,61 @@
             <div><div class="k">Ngày hết hạn</div><div class="v mono" [style.color]="d.badgeColor">{{ d.expiryVn }}</div></div>
           </div>
 
+          <!-- ===== quan hệ nghiệp vụ: thay thế / bãi bỏ / sửa đổi ===== -->
+          <div class="relations-sec">
+            <div class="hist-head">
+              <span class="k">Quan hệ văn bản</span>
+              @if (canRelate() && !relateOpen()) {
+                <button class="hist-replace" (click)="openRelate()">🔗 Thêm quan hệ…</button>
+              }
+            </div>
+
+            @if (store.relations().length === 0) {
+              <div class="hist-empty">Chưa có quan hệ với văn bản khác.</div>
+            } @else {
+              <div class="rel-list">
+                @for (r of store.relations(); track r.id) {
+                  <div class="rel-item">
+                    <span class="rel-badge" [style.background]="relColor(r.type)">{{ relDirLabel(r) }}</span>
+                    <span class="rel-doc">
+                      <span class="mono">#{{ r.otherDocId }}</span> — {{ r.otherDocTitle || 'Văn bản đã xóa' }}
+                    </span>
+                    <span class="rel-time mono">{{ fmtDateTime(r.createdAt) }}</span>
+                  </div>
+                }
+              </div>
+            }
+
+            @if (relateOpen()) {
+              <div class="action-box rel-box">
+                <div class="field-label">Loại quan hệ</div>
+                <select class="field-input" [(ngModel)]="relateType">
+                  @for (t of relationTypes; track t.value) {
+                    <option [ngValue]="t.value">{{ t.label }}</option>
+                  }
+                </select>
+                <div class="field-label" style="margin-top:10px">Văn bản đối tác (văn bản cũ)</div>
+                <select class="field-input" [(ngModel)]="relateTargetId">
+                  <option [ngValue]="null" disabled>— Chọn văn bản —</option>
+                  @for (c of relateCandidates(); track c.id) {
+                    <option [ngValue]="c.id">{{ c.code }} · {{ c.title }}</option>
+                  }
+                </select>
+                <div class="rel-hint">
+                  @switch (relateType) {
+                    @case ('REPLACE') { Văn bản cũ sẽ được đánh dấu <b>hết hiệu lực</b>. }
+                    @case ('REPEAL') { Văn bản cũ sẽ được đánh dấu <b>hết hiệu lực</b>. }
+                    @case ('AMEND') { Chỉ liên kết tham chiếu — văn bản cũ <b>vẫn còn hiệu lực</b>. }
+                  }
+                </div>
+                <div class="box-actions">
+                  <button class="btn-ghost" (click)="relateOpen.set(false)">Hủy</button>
+                  <button class="btn-primary" [disabled]="relateTargetId == null" (click)="confirmRelate()">Xác nhận</button>
+                </div>
+              </div>
+            }
+          </div>
+
           @if (d.description) {
             <div>
               <div class="k">Mô tả</div>
@@ -74,6 +129,47 @@
               </div>
             </div>
           }
+
+          <!-- ===== lịch sử thay đổi (audit log) ===== -->
+          <div class="history-sec">
+            <div class="hist-head">
+              <span class="k">Lịch sử thay đổi</span>
+            </div>
+
+            @if (store.historyLoading()) {
+              <div class="hist-empty">Đang tải lịch sử…</div>
+            } @else if (store.history().length === 0) {
+              <div class="hist-empty">Chưa có lịch sử thay đổi.</div>
+            } @else {
+              <div class="timeline">
+                @for (h of store.history(); track h.id) {
+                  <div class="tl-item">
+                    <span class="tl-dot" [style.background]="actionDot(h.action)"></span>
+                    <div class="tl-body">
+                      <div class="tl-top">
+                        <span class="tl-action" [style.color]="actionDot(h.action)">{{ actionLabel(h.action) }}</span>
+                        <span class="tl-actor">{{ h.actorName || ('Người dùng #' + h.actorId) }}</span>
+                        <span class="tl-time mono">{{ fmtDateTime(h.createdAt) }}</span>
+                      </div>
+                      @if (h.comment) { <div class="tl-comment">{{ h.comment }}</div> }
+                      @if (parseChanges(h.changes).length) {
+                        <div class="tl-changes">
+                          @for (c of parseChanges(h.changes); track c.field) {
+                            <div class="tl-chg">
+                              <span class="chg-field">{{ c.field }}</span>
+                              <span class="chg-old">{{ c.old }}</span>
+                              <span class="chg-arrow">→</span>
+                              <span class="chg-new">{{ c.new }}</span>
+                            </div>
+                          }
+                        </div>
+                      }
+                    </div>
+                  </div>
+                }
+              </div>
+            }
+          </div>
         </div>
 
         <!-- ===== section tệp + preview full-width ===== -->

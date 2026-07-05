@@ -1,9 +1,12 @@
-import { Component, computed, inject, signal } from '@angular/core';
+import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../core/auth.service';
 import { DocumentStore } from '../../core/document-store.service';
-import { fmtIso, toDate } from '../../core/models';
+import {
+  AUDIT_ACTION_COLOR, AUDIT_ACTION_VN, AuditAction, DocRelation, FIELD_VN,
+  REL_DIRECTION_VN, REL_TYPE_COLOR, REL_TYPE_VN, RelationType, fmtIso, toDate
+} from '../../core/models';
 
 /** Modal chi tiết văn bản (giữa màn hình), kèm xem trước PDF và gia hạn theo calendar. */
 @Component({
@@ -23,9 +26,39 @@ export class DocDrawer {
   readonly renewOpen = signal(false);
   renewDate = '';
 
+  readonly relateOpen = signal(false);
+  relateTargetId: number | null = null;
+  relateType: RelationType = 'REPLACE';
+
   readonly minDate = fmtIso(new Date(Date.now() + 86400000)); // backend validate @Future
 
   readonly doc = this.store.selected;
+
+  /** nhãn hiển thị cho audit log */
+  readonly actionVn = AUDIT_ACTION_VN;
+  readonly actionColor = AUDIT_ACTION_COLOR;
+
+  /** các loại quan hệ cho dropdown */
+  readonly relationTypes: { value: RelationType; label: string }[] =
+    (Object.keys(REL_TYPE_VN) as RelationType[]).map(t => ({ value: t, label: REL_TYPE_VN[t] }));
+
+  constructor() {
+    // mở văn bản nào thì tải lịch sử thay đổi + quan hệ của văn bản đó
+    effect(() => {
+      const id = this.store.selectedId();
+      if (id != null) {
+        this.store.loadHistory(id);
+        this.store.loadRelations(id);
+      } else {
+        this.store.history.set([]);
+        this.store.relations.set([]);
+      }
+    });
+  }
+
+  /** danh sách văn bản có thể chọn để tạo quan hệ (trừ chính nó) */
+  readonly relateCandidates = computed(() =>
+    this.store.all().filter(d => d.id !== this.doc()?.id));
 
   /** Chủ sở hữu hoặc quản lý mới được thao tác vòng đời */
   readonly isOwner = computed(() => this.doc()?.ownerId === this.auth.user()?.userId);
@@ -38,6 +71,9 @@ export class DocDrawer {
     const s = this.doc()?.dispStatus;
     return s === 'ACTIVE' || s === 'WARNING' || s === 'EXPIRED';
   });
+
+  /** chủ sở hữu hoặc quản lý mới được tạo quan hệ (thay thế/bãi bỏ/sửa đổi) */
+  readonly canRelate = computed(() => this.isOwner() || this.auth.isManager());
 
   readonly isPdf = computed(() => this.doc()?.filePath?.toLowerCase().endsWith('.pdf') ?? false);
 
@@ -53,6 +89,60 @@ export class DocDrawer {
     this.rejectReason.set('');
     this.confirmingDelete.set(false);
     this.renewOpen.set(false);
+    this.relateOpen.set(false);
+    this.relateTargetId = null;
+    this.relateType = 'REPLACE';
+  }
+
+  openRelate(): void {
+    this.relateTargetId = null;
+    this.relateType = 'REPLACE';
+    this.relateOpen.set(true);
+  }
+
+  confirmRelate(): void {
+    const d = this.doc();
+    if (!d || this.relateTargetId == null) return;
+    this.store.relate(d.id, +this.relateTargetId, this.relateType);
+    this.relateOpen.set(false);
+  }
+
+  /** nhãn quan hệ theo chiều, vd "Thay thế cho" / "Bị bãi bỏ bởi". */
+  relDirLabel(r: DocRelation): string {
+    return REL_DIRECTION_VN[r.type][r.direction];
+  }
+
+  relColor(type: RelationType): string {
+    return REL_TYPE_COLOR[type];
+  }
+
+  /** parse JSON changes → danh sách {trường, trước, sau} để hiển thị. */
+  parseChanges(json: string | null): { field: string; old: string; new: string }[] {
+    if (!json) return [];
+    try {
+      const obj = JSON.parse(json) as Record<string, { old: unknown; new: unknown }>;
+      return Object.entries(obj).map(([k, v]) => ({
+        field: FIELD_VN[k] ?? k,
+        old: v.old == null || v.old === '' ? '—' : String(v.old),
+        new: v.new == null || v.new === '' ? '—' : String(v.new)
+      }));
+    } catch {
+      return [];
+    }
+  }
+
+  actionLabel(action: string): string {
+    return this.actionVn[action as AuditAction] ?? action;
+  }
+
+  actionDot(action: string): string {
+    return this.actionColor[action as AuditAction] ?? '#9A95A2';
+  }
+
+  fmtDateTime(iso: string): string {
+    const d = new Date(iso);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()} ${p(d.getHours())}:${p(d.getMinutes())}`;
   }
 
   fileName(path: string): string {

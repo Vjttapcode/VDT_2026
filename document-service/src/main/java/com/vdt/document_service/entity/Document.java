@@ -68,6 +68,10 @@ public class Document {
     @Column(name = "renewal_count", nullable = false)
     private Integer renewalCount;
 
+    /** Văn bản này thay thế văn bản nào (logical ref, null nếu không thay thế gì). */
+    @Column(name = "supersedes_id")
+    private Long supersedesId;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
