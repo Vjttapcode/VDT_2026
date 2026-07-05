@@ -4,13 +4,13 @@ import { Router, RouterOutlet } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { DocumentStore, StatusFilter } from '../../core/document-store.service';
 import { DocDrawer } from '../../shared/doc-drawer/doc-drawer';
-import { AddDocModal } from '../../shared/add-doc-modal/add-doc-modal';
 
 interface NavItem { path: string; label: string; icon: string; badge?: boolean; roles?: string[]; }
 
 const SECTIONS: Record<string, [string, string]> = {
   dashboard: ['TỔNG QUAN · OVERVIEW', 'Bảng điều khiển văn bản'],
   documents: ['VĂN BẢN · DOCUMENTS', 'Toàn bộ văn bản'],
+  'documents/new': ['VĂN BẢN · TẠO MỚI', 'Thêm văn bản mới'],
   alerts: ['CẢNH BÁO · ALERTS', 'Văn bản cần xử lý'],
   calendar: ['LỊCH · CALENDAR', 'Lịch hết hạn'],
   reports: ['NHẬT KÝ · ALERT LOG', 'Nhật ký cảnh báo'],
@@ -19,7 +19,7 @@ const SECTIONS: Record<string, [string, string]> = {
 
 @Component({
   selector: 'app-shell',
-  imports: [RouterOutlet, DocDrawer, AddDocModal],
+  imports: [RouterOutlet, DocDrawer],
   templateUrl: './shell.html',
   styleUrl: './shell.scss'
 })
@@ -87,7 +87,12 @@ export class Shell implements OnInit {
   @HostListener('document:keydown.escape')
   onEscape(): void {
     this.store.selectedId.set(null);
-    this.store.showAdd.set(false);
+    this.store.showNotif.set(false);
+    this.showUserMenu.set(false);
+  }
+
+  goNew(): void {
+    this.router.navigate(['/documents/new']);
     this.store.showNotif.set(false);
     this.showUserMenu.set(false);
   }
@@ -137,6 +142,9 @@ export class Shell implements OnInit {
   }
 
   private pathOf(url: string): string {
-    return url.split('?')[0].split('/').filter(Boolean)[0] ?? 'dashboard';
+    const segments = url.split('?')[0].split('/').filter(Boolean);
+    const joined = segments.join('/');
+    // ưu tiên path đầy đủ (vd documents/new), fallback segment đầu
+    return SECTIONS[joined] ? joined : segments[0] ?? 'dashboard';
   }
 }

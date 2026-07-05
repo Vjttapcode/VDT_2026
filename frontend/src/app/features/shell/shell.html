@@ -17,7 +17,7 @@
     <div class="spacer"></div>
 
     <div class="actions">
-      <button class="add-btn" (click)="store.showAdd.set(true)">+<span class="add-label"> Thêm văn bản</span></button>
+      <button class="add-btn" (click)="goNew()">+<span class="add-label"> Thêm văn bản</span></button>
 
       <div class="notif-wrap">
         <button class="icon-btn" (click)="toggleNotif()" title="Thông báo" aria-label="Thông báo">
@@ -76,7 +76,8 @@
     <!-- ===== SIDEBAR ===== -->
     <aside class="sidebar">
       @for (n of visibleNav(); track n.path) {
-        <button class="nav-btn" [class.active]="currentPath() === n.path"
+        <button class="nav-btn"
+                [class.active]="currentPath() === n.path || currentPath().startsWith(n.path + '/')"
                 [title]="n.label" [attr.aria-label]="n.label" (click)="go(n.path)">
           @switch (n.icon) {
             @case ('grid') {
@@ -155,7 +156,6 @@
 
   <!-- overlays -->
   <app-doc-drawer />
-  <app-add-doc-modal />
 
   <!-- toasts -->
   <div class="toast-wrap">

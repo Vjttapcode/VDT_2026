@@ -1,4 +1,5 @@
 import { Component, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { DocumentStore, StatusFilter } from '../../core/document-store.service';
 
 @Component({
@@ -9,6 +10,11 @@ import { DocumentStore, StatusFilter } from '../../core/document-store.service';
 })
 export class DocumentsPage {
   readonly store = inject(DocumentStore);
+  private router = inject(Router);
+
+  goNew(): void {
+    this.router.navigate(['/documents/new']);
+  }
 
   readonly chips: { key: StatusFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },

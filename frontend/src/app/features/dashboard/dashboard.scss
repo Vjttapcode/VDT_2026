@@ -91,51 +91,20 @@
 
 .empty { padding: 32px; text-align: center; font-size: 13px; color: var(--muted-2); }
 
-/* ===== dark card ===== */
-.dark-card {
-  background: var(--dark-card); border-radius: 16px; padding: 20px;
-  display: flex; gap: 16px;
-}
-.dark-left {
-  flex: 1; min-width: 0;
-  .dk-title { font-size: 15px; font-weight: 700; color: #fff; }
-  .dk-sub { font-size: 10.5px; color: #8B90A0; margin-bottom: 12px; }
-  .dk-text { font-size: 11.5px; color: #B7BCCB; line-height: 1.55; }
-  .hl-red { color: #FF6A62; font-weight: 600; }
-  .hl-gold { color: #FFC24B; font-weight: 600; }
-}
-.ontime {
-  display: flex; align-items: center; gap: 11px;
-  background: #2A2F3B; border-radius: 12px; padding: 12px; margin-top: 16px;
-  .oic {
-    width: 34px; height: 34px; border-radius: 10px; background: rgba(46, 204, 113, .18); flex: none;
-    display: flex; align-items: center; justify-content: center;
-    span { width: 11px; height: 11px; border-radius: 3px; background: #2ECC71; }
-  }
-  .opct { font-size: 18px; font-weight: 700; color: #fff; line-height: 1.2; }
-  .olbl { font-size: 10px; color: #8B90A0; }
-}
-.dark-right {
-  width: 138px; flex: none; background: var(--red-light); border-radius: 13px;
-  padding: 16px 14px; display: flex; flex-direction: column; align-items: center;
-  .donut {
-    width: 96px; height: 96px; border-radius: 50%;
-    display: flex; align-items: center; justify-content: center;
-  }
-  .donut-hole {
-    width: 64px; height: 64px; border-radius: 50%; background: var(--red-light);
-    display: flex; flex-direction: column; align-items: center; justify-content: center;
-    .dpct { font-size: 17px; font-weight: 700; color: #fff; line-height: 1; }
-    .dlbl { font-size: 8px; color: rgba(255, 255, 255, .8); }
-  }
-  .divider { width: 100%; height: 1px; background: rgba(255, 255, 255, .2); margin: 14px 0 12px; }
-  .mng { font-size: 9px; color: rgba(255, 255, 255, .85); letter-spacing: .5px; }
-  .mng-count { font-size: 26px; font-weight: 700; color: #fff; letter-spacing: -1px; line-height: 1.1; }
-  .mng-sub { font-size: 9.5px; color: rgba(255, 255, 255, .85); text-align: center; }
-}
-
-/* ===== bar chart ===== */
+/* ===== bar chart + tổng quan năm ===== */
 .chart-card { padding: 20px; }
+
+.year-stats {
+  display: grid; grid-template-columns: repeat(3, 1fr);
+  border: 1px solid var(--border); border-radius: 12px;
+  margin-bottom: 18px; overflow: hidden;
+  .ys {
+    padding: 12px 8px; text-align: center;
+    &:not(:last-child) { border-right: 1px solid var(--border); }
+  }
+  .ys-value { font-size: 19px; font-weight: 700; color: var(--ink); letter-spacing: -.5px; line-height: 1.2; }
+  .ys-label { font-size: 10.5px; color: var(--muted-2); margin-top: 2px; }
+}
 .chart-head {
   display: flex; align-items: center; justify-content: space-between; margin-bottom: 18px;
   .tt { font-size: 15px; font-weight: 700; color: var(--ink); }
@@ -171,8 +140,6 @@
   .tgrid { min-width: 640px; }
 }
 @media (max-width: 560px) {
-  .dark-card { flex-direction: column; align-items: stretch; }
-  .dark-right { width: 100%; }
   .recent-grid { grid-template-columns: 1fr; }
   .bars { gap: 3px; }
 }

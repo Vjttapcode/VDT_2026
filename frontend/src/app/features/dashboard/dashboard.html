@@ -9,15 +9,15 @@
           <span class="tic" style="background:rgba(238,58,51,.12)"><span style="background:#EE3A33"></span></span>
           <span>Tải lên văn bản</span>
         </div>
-        <button class="dropzone" (click)="store.showAdd.set(true)">
+        <button class="dropzone" (click)="goNew()">
           <div class="drop-icon">
             <svg viewBox="0 0 24 24" fill="none" stroke="#EE3A33" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
               <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
             </svg>
           </div>
-          <div class="drop-text">Thêm văn bản mới<br>kèm hạn hiệu lực</div>
+          <div class="drop-text">Thêm văn bản mới<br>kèm tệp PDF/Word xem trước</div>
         </button>
-        <button class="btn-primary full" (click)="store.showAdd.set(true)">Lưu văn bản</button>
+        <button class="btn-primary full" (click)="goNew()">Thêm văn bản</button>
       </div>
 
       <!-- recent -->
@@ -89,7 +89,7 @@
           <div class="empty-state">
             <span class="es-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/></svg></span>
             <span class="es-text">Chưa có văn bản nào trong hệ thống.</span>
-            <button class="btn-primary" (click)="store.showAdd.set(true)">+ Thêm văn bản đầu tiên</button>
+            <button class="btn-primary" (click)="goNew()">+ Thêm văn bản đầu tiên</button>
           </div>
         }
       }
@@ -98,43 +98,26 @@
 
   <!-- ===== RIGHT COLUMN ===== -->
   <div class="right-col">
-    <!-- year at a glance -->
-    <div class="dark-card">
-      <div class="dark-left">
-        <div class="dk-title">Tổng quan {{ year }}</div>
-        <div class="dk-sub">Year at a glance</div>
-        <div class="dk-text">
-          Chào mừng trở lại! Hiện có
-          <span class="hl-red">{{ store.counts().expired }} văn bản</span> đã hết hạn và
-          <span class="hl-gold">{{ store.counts().warning }}</span> sắp đến hạn cần xử lý.
-        </div>
-        <div class="ontime">
-          <span class="oic"><span></span></span>
-          <div>
-            <div class="opct mono">{{ donut().onTime }}</div>
-            <div class="olbl">Đúng hạn · On-time</div>
-          </div>
-        </div>
-      </div>
-      <div class="dark-right">
-        <div class="donut" [style.background]="donut().gradient">
-          <div class="donut-hole">
-            <div class="dpct mono">{{ donut().riskPct }}</div>
-            <div class="dlbl">cần chú ý</div>
-          </div>
-        </div>
-        <div class="divider"></div>
-        <div class="mng">ĐANG QUẢN LÝ</div>
-        <div class="mng-count mono">{{ store.counts().total }}</div>
-        <div class="mng-sub">văn bản trong hệ thống</div>
-      </div>
-    </div>
-
-    <!-- bar chart -->
+    <!-- bar chart + tổng quan năm -->
     <div class="card pad chart-card">
       <div class="chart-head">
         <span class="tt">Hết hạn theo tháng</span>
         <span class="range-tag mono">01 - 12 / {{ year }}</span>
+      </div>
+
+      <div class="year-stats">
+        <div class="ys">
+          <div class="ys-value mono" style="color:#1B7F50">{{ donut().onTime }}</div>
+          <div class="ys-label">đúng hạn</div>
+        </div>
+        <div class="ys">
+          <div class="ys-value mono" style="color:#C62B26">{{ donut().riskPct }}</div>
+          <div class="ys-label">cần chú ý</div>
+        </div>
+        <div class="ys">
+          <div class="ys-value mono">{{ store.counts().total }}</div>
+          <div class="ys-label">đang quản lý</div>
+        </div>
       </div>
       <div class="chart">
         <div class="bars">

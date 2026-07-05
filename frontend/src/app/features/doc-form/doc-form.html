@@ -1,0 +1,103 @@
+<a class="back-link" routerLink="/documents">← Quay lại danh sách văn bản</a>
+
+<div class="form-grid">
+
+  <!-- ===== THÔNG TIN ===== -->
+  <form class="card info-card" (ngSubmit)="save()">
+    <div class="card-title">Thông tin văn bản</div>
+
+    <div>
+      <div class="field-label">Tên văn bản</div>
+      <input class="field-input" type="text" name="title" [(ngModel)]="title"
+             placeholder="VD: Hợp đồng cung cấp dịch vụ…" required autofocus>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="field-label">Loại</div>
+        <select class="field-input" name="type" [(ngModel)]="type">
+          @for (t of typeOptions; track t.value) {
+            <option [ngValue]="t.value">{{ t.label }}</option>
+          }
+        </select>
+      </div>
+      <div>
+        <div class="field-label">Cấp áp dụng</div>
+        <select class="field-input" name="level" [(ngModel)]="level">
+          @for (l of levelOptions; track l.value) {
+            <option [ngValue]="l.value">{{ l.label }}</option>
+          }
+        </select>
+      </div>
+    </div>
+
+    <div class="two-col">
+      <div>
+        <div class="field-label">Ngày hết hạn</div>
+        <input class="field-input" type="date" name="expiryDate"
+               [(ngModel)]="expiryDate" [min]="minDate" required>
+      </div>
+      <div class="submit-now-cell">
+        <label class="submit-now">
+          <input type="checkbox" name="submitNow" [(ngModel)]="submitNow">
+          Gửi duyệt ngay sau khi tạo
+        </label>
+      </div>
+    </div>
+
+    <div>
+      <div class="field-label">Mô tả <span class="opt">(không bắt buộc)</span></div>
+      <textarea class="field-input" rows="4" name="description" [(ngModel)]="description"
+                placeholder="Ghi chú ngắn về văn bản…"></textarea>
+    </div>
+
+    <div class="form-foot">
+      <a class="btn-ghost" routerLink="/documents">Hủy</a>
+      <button type="submit" class="btn-primary save-btn" [disabled]="!valid() || saving()">
+        @if (saving()) { <span class="spinner"></span> }
+        Lưu văn bản
+      </button>
+    </div>
+  </form>
+
+  <!-- ===== TỆP ĐÍNH KÈM + PREVIEW ===== -->
+  <div class="card file-card">
+    <div class="card-title">
+      Tệp đính kèm
+      <span class="opt">PDF, DOC, DOCX · tối đa 10MB</span>
+    </div>
+
+    @if (file(); as f) {
+      <div class="file-row">
+        <span class="file-icon"><span></span></span>
+        <div class="file-body">
+          <div class="file-name">{{ f.name }}</div>
+          <div class="file-sub">{{ fileSize(f) }}</div>
+        </div>
+        <button type="button" class="file-remove" (click)="removeFile()" aria-label="Gỡ tệp">✕</button>
+      </div>
+
+      @if (isPdf() && previewUrl()) {
+        <iframe class="pdf-preview" [src]="previewUrl()" title="Xem trước PDF"></iframe>
+      } @else {
+        <div class="docx-note">
+          <span class="es-icon"><svg viewBox="0 0 24 24" fill="none" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M9 13h6M9 17h6"/></svg></span>
+          <div>
+            <div class="dn-head">Tệp Word đã sẵn sàng đính kèm</div>
+            <div class="dn-sub">Trình duyệt không hỗ trợ xem trước .doc/.docx — tệp sẽ tải được sau khi lưu.</div>
+          </div>
+        </div>
+      }
+    } @else {
+      <label class="upload-zone">
+        <input type="file" hidden accept=".pdf,.doc,.docx" (change)="onFile($event)">
+        <div class="uz-icon">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#EE3A33" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
+          </svg>
+        </div>
+        <div class="uz-text">Bấm để chọn tệp PDF / Word<br><span>Xem trước PDF ngay tại đây trước khi lưu</span></div>
+      </label>
+    }
+  </div>
+</div>

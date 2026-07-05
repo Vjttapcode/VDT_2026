@@ -1,4 +1,5 @@
 import { Component, computed, inject } from '@angular/core';
+import { Router } from '@angular/router';
 import { DocumentStore, StatusFilter } from '../../core/document-store.service';
 
 @Component({
@@ -9,8 +10,13 @@ import { DocumentStore, StatusFilter } from '../../core/document-store.service';
 })
 export class DashboardPage {
   readonly store = inject(DocumentStore);
+  private router = inject(Router);
 
   readonly year = new Date().getFullYear();
+
+  goNew(): void {
+    this.router.navigate(['/documents/new']);
+  }
 
   readonly chips: { key: StatusFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },
@@ -22,16 +28,13 @@ export class DashboardPage {
 
   readonly sortLabels: Record<string, string> = { urgency: 'Mức khẩn', name: 'Tên A→Z', type: 'Loại' };
 
-  /** % văn bản cần chú ý (hết hạn + sắp hết hạn) cho donut */
+  /** % đúng hạn / cần chú ý cho dải chỉ số trong card biểu đồ */
   readonly donut = computed(() => {
     const c = this.store.counts();
     const total = c.total || 1;
-    const eP = (c.expired / total) * 100;
-    const sP = eP + (c.warning / total) * 100;
     return {
       riskPct: Math.round(((c.expired + c.warning) / total) * 100) + '%',
-      onTime: Math.round((c.active / total) * 100) + '%',
-      gradient: `conic-gradient(#FFFFFF 0 ${eP.toFixed(1)}%, #FFD27A ${eP.toFixed(1)}% ${sP.toFixed(1)}%, rgba(255,255,255,.22) ${sP.toFixed(1)}% 100%)`
+      onTime: Math.round((c.active / total) * 100) + '%'
     };
   });
 

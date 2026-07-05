@@ -1,6 +1,6 @@
 import { Injectable, computed, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
-import { forkJoin, of } from 'rxjs';
+import { firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
   DashboardStats, DEPT_VN, DocStatus, DocType, DocLevel, DocumentDto, DocView,
@@ -33,7 +33,6 @@ export class DocumentStore {
   readonly statusFilter = signal<StatusFilter>('all');
   readonly sortBy = signal<SortKey>('urgency');
   readonly selectedId = signal<number | null>(null);
-  readonly showAdd = signal(false);
   readonly showNotif = signal(false);
   readonly toasts = signal<Toast[]>([]);
 
@@ -120,21 +119,34 @@ export class DocumentStore {
     });
   }
 
-  create(req: { title: string; description: string; type: DocType; level: DocLevel; expiryDate: string }, submitNow: boolean): void {
-    this.http.post<DocumentDto>(API, req).subscribe({
-      next: doc => {
-        if (submitNow) {
-          this.http.post<DocumentDto>(`${API}/${doc.id}/submit`, {}).subscribe({
-            next: () => this.afterMutation(doc.id, 'Đã tạo và gửi duyệt văn bản'),
-            error: err => this.afterMutation(doc.id, undefined, this.errText(err, 'Tạo thành công nhưng gửi duyệt thất bại'))
-          });
-        } else {
-          this.afterMutation(doc.id, 'Đã lưu văn bản nháp');
-        }
-        this.showAdd.set(false);
-      },
-      error: err => this.toast('err', this.errText(err, 'Không tạo được văn bản'))
-    });
+  /** Tạo văn bản, kèm upload tệp và gửi duyệt tùy chọn — dùng cho trang /documents/new. */
+  async createFull(
+    req: { title: string; description: string; type: DocType; level: DocLevel; expiryDate: string },
+    file: File | null,
+    submitNow: boolean
+  ): Promise<number | null> {
+    let doc: DocumentDto;
+    try {
+      doc = await firstValueFrom(this.http.post<DocumentDto>(API, req));
+    } catch (err) {
+      this.toast('err', this.errText(err as HttpErrorResponse, 'Không tạo được văn bản'));
+      return null;
+    }
+    try {
+      if (file) {
+        const form = new FormData();
+        form.append('file', file);
+        await firstValueFrom(this.http.post<DocumentDto>(`${API}/${doc.id}/upload`, form));
+      }
+      if (submitNow) {
+        await firstValueFrom(this.http.post<DocumentDto>(`${API}/${doc.id}/submit`, {}));
+      }
+      this.afterMutation(doc.id, submitNow ? 'Đã tạo và gửi duyệt văn bản' : 'Đã lưu văn bản nháp');
+    } catch (err) {
+      // văn bản đã tạo — báo phần lỗi còn lại, vẫn điều hướng để user xử lý tiếp
+      this.afterMutation(doc.id, undefined, this.errText(err as HttpErrorResponse, 'Đã tạo văn bản nhưng bước sau thất bại'));
+    }
+    return doc.id;
   }
 
   submit(id: number): void { this.action(id, 'submit', 'Đã gửi duyệt'); }
@@ -147,12 +159,10 @@ export class DocumentStore {
     });
   }
 
-  /** Gia hạn thêm ~6 tháng kể từ hạn hiện tại (tối thiểu từ hôm nay). */
-  renew(doc: DocView): void {
-    const base = Math.max(toDate(doc.expiryDate).getTime(), Date.now());
-    const next = new Date(base + 180 * 86400000);
-    this.http.post<DocumentDto>(`${API}/${doc.id}/renew`, { newExpiryDate: fmtIso(next) }).subscribe({
-      next: () => this.afterMutation(doc.id, `Đã gia hạn tới ${fmtDate(next)}`),
+  /** Gia hạn tới ngày cụ thể do người dùng chọn từ calendar. */
+  renewTo(id: number, isoDate: string): void {
+    this.http.post<DocumentDto>(`${API}/${id}/renew`, { newExpiryDate: isoDate }).subscribe({
+      next: () => this.afterMutation(id, `Đã gia hạn tới ${fmtDate(toDate(isoDate))}`),
       error: err => this.toast('err', this.errText(err, 'Không gia hạn được'))
     });
   }
