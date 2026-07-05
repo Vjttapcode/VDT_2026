@@ -11,6 +11,8 @@ const API = '/api/documents';
 
 export type StatusFilter = 'all' | 'ACTIVE' | 'WARNING' | 'EXPIRED' | 'PENDING';
 export type SortKey = 'urgency' | 'name' | 'type';
+export type TypeFilter = DocType | 'all';
+export type DeptFilter = number | 'all';
 
 export interface Toast { id: number; kind: 'ok' | 'err'; text: string; }
 
@@ -36,15 +38,33 @@ export class DocumentStore {
   readonly showNotif = signal(false);
   readonly toasts = signal<Toast[]>([]);
 
+  /* ===== bộ lọc nâng cao (tra cứu) ===== */
+  readonly typeFilter = signal<TypeFilter>('all');       // loại văn bản
+  readonly deptFilter = signal<DeptFilter>('all');       // đơn vị ban hành
+  readonly ownerQuery = signal('');                      // người phụ trách
+  readonly expiryFrom = signal('');                      // hết hạn từ (yyyy-mm-dd)
+  readonly expiryTo = signal('');                        // hết hạn đến (yyyy-mm-dd)
+
   /* ===== derived ===== */
   readonly all = computed<DocView[]>(() => this.docs().map(d => this.present(d)));
 
   readonly filtered = computed<DocView[]>(() => {
     const q = this.query().trim().toLowerCase();
     const st = this.statusFilter();
+    const tp = this.typeFilter();
+    const dp = this.deptFilter();
+    const oq = this.ownerQuery().trim().toLowerCase();
+    const from = this.expiryFrom();
+    const to = this.expiryTo();
     const match = (d: DocView) =>
-      (!q || `${d.title} ${d.code} ${d.deptName} ${d.typeVn} ${d.levelVn}`.toLowerCase().includes(q)) &&
-      (st === 'all' || d.dispStatus === st || (st === 'PENDING' && (d.dispStatus === 'DRAFT' || d.dispStatus === 'REJECTED')));
+      // ô tìm toàn cục: số VB, tên, đơn vị, loại, cấp, người phụ trách, nội dung mô tả
+      (!q || `${d.title} ${d.code} ${d.deptName} ${d.typeVn} ${d.levelVn} ${d.ownerVn} ${d.description ?? ''}`.toLowerCase().includes(q)) &&
+      (st === 'all' || d.dispStatus === st || (st === 'PENDING' && (d.dispStatus === 'DRAFT' || d.dispStatus === 'REJECTED'))) &&
+      (tp === 'all' || d.type === tp) &&                                   // loại văn bản
+      (dp === 'all' || d.departmentId === dp) &&                          // đơn vị ban hành
+      (!oq || d.ownerVn.toLowerCase().includes(oq)) &&                    // người phụ trách
+      (!from || d.expiryDate >= from) &&                                  // hết hạn từ (so sánh chuỗi ISO)
+      (!to || d.expiryDate <= to);                                        // hết hạn đến
     const sorters: Record<SortKey, (a: DocView, b: DocView) => number> = {
       urgency: (a, b) => a.daysLeft - b.daysLeft,
       name: (a, b) => a.title.localeCompare(b.title, 'vi'),
@@ -52,6 +72,22 @@ export class DocumentStore {
     };
     return this.all().filter(match).sort(sorters[this.sortBy()]);
   });
+
+  /* ===== tuỳ chọn cho dropdown lọc — chỉ hiện giá trị đang có trong phạm vi role ===== */
+  readonly typeOptions = computed<DocType[]>(() => {
+    const present = new Set(this.all().map(d => d.type));
+    return (['CONTRACT', 'LICENSE', 'CERTIFICATE', 'SR'] as DocType[]).filter(t => present.has(t));
+  });
+
+  readonly deptOptions = computed<{ id: number; name: string }[]>(() => {
+    const ids = [...new Set(this.all().map(d => d.departmentId).filter((x): x is number => x != null))];
+    return ids.map(id => ({ id, name: DEPT_VN[id] ?? `Phòng ban #${id}` })).sort((a, b) => a.id - b.id);
+  });
+
+  /** Có đang bật ít nhất một bộ lọc nâng cao không (để hiện nút Xóa lọc). */
+  readonly hasAdvancedFilter = computed(() =>
+    this.typeFilter() !== 'all' || this.deptFilter() !== 'all' ||
+    !!this.ownerQuery().trim() || !!this.expiryFrom() || !!this.expiryTo());
 
   readonly selected = computed<DocView | null>(() => {
     const id = this.selectedId();
@@ -187,6 +223,17 @@ export class DocumentStore {
     });
   }
 
+  /** Xóa toàn bộ bộ lọc (ô tìm, trạng thái, và các bộ lọc nâng cao). */
+  clearAllFilters(): void {
+    this.query.set('');
+    this.statusFilter.set('all');
+    this.typeFilter.set('all');
+    this.deptFilter.set('all');
+    this.ownerQuery.set('');
+    this.expiryFrom.set('');
+    this.expiryTo.set('');
+  }
+
   toast(kind: 'ok' | 'err', text: string): void {
     const id = ++this.toastSeq;
     this.toasts.update(list => [...list, { id, kind, text }]);
@@ -232,6 +279,7 @@ export class DocumentStore {
       typeVn: TYPE_VN[d.type],
       levelVn: LEVEL_VN[d.level],
       deptName: d.departmentId != null ? DEPT_VN[d.departmentId] ?? `Phòng ban #${d.departmentId}` : LEVEL_VN[d.level],
+      ownerVn: d.ownerName?.trim() || `Người dùng #${d.ownerId}`,
       daysLeft,
       dispStatus,
       statusVn: st.vn,

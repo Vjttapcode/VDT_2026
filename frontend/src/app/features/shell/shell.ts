@@ -66,7 +66,8 @@ export class Shell implements OnInit {
     return labels[this.store.statusFilter()];
   });
 
-  readonly isFiltering = computed(() => this.store.statusFilter() !== 'all' || !!this.store.query().trim());
+  readonly isFiltering = computed(() =>
+    this.store.statusFilter() !== 'all' || !!this.store.query().trim() || this.store.hasAdvancedFilter());
 
   private readonly titleSrv = inject(Title);
 
@@ -118,8 +119,7 @@ export class Shell implements OnInit {
   }
 
   clearFilter(): void {
-    this.store.statusFilter.set('all');
-    this.store.query.set('');
+    this.store.clearAllFilters();
   }
 
   onSearch(value: string): void {

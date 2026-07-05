@@ -76,13 +76,18 @@ public class DocumentService {
             case "MANAGER_CENTER"  -> repo.findByDepartmentId(SecurityUtil.currentDepartmentId());
             default                -> repo.findByOwnerId(SecurityUtil.currentUserId()); // USER
         };
-        return docs.stream().map(DocumentResponse::from).toList();
+        // cache tên theo ownerId để tra cứu/hiển thị người phụ trách, tránh gọi auth-service trùng
+        Map<Long, String> nameCache = new HashMap<>();
+        return docs.stream()
+                .map(d -> DocumentResponse.from(d,
+                        nameCache.computeIfAbsent(d.getOwnerId(), authClient::getName)))
+                .toList();
     }
 
     public DocumentResponse get(Long id) {
         Document doc = findOrThrow(id);
         assertCanView(doc);
-        return DocumentResponse.from(doc);
+        return DocumentResponse.from(doc, authClient.getName(doc.getOwnerId()));
     }
 
     @Transactional

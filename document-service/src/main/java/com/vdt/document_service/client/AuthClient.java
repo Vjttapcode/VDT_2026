@@ -32,5 +32,17 @@ public class AuthClient {
         }
     }
 
+    /** Tên đầy đủ của người phụ trách — dùng để hiển thị & tra cứu theo người phụ trách. */
+    public String getName(Long userId) {
+        if(userId == null) return null;
+        try {
+            AuthUserDto u = restTemplate.getForObject(authUrl + "/internal/users/" + userId, AuthUserDto.class);
+            return u == null ? null : u.fullName();
+        } catch (Exception e) {
+            log.warn("[AuthClient] không lấy được tên userId={} err={}", userId, e.getMessage());
+            return null;
+        }
+    }
+
     
 }

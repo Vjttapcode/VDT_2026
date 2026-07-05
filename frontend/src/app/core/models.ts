@@ -21,6 +21,7 @@ export interface DocumentDto {
   level: DocLevel;
   status: DocStatus;
   ownerId: number;
+  ownerName: string | null;
   departmentId: number | null;
   companyId: number | null;
   expiryDate: string;
@@ -97,6 +98,7 @@ export interface DocView extends DocumentDto {
   typeVn: string;
   levelVn: string;
   deptName: string;
+  ownerVn: string;
   daysLeft: number;
   /** trạng thái hiển thị: ACTIVE/WARNING được suy lại từ daysLeft cho realtime */
   dispStatus: DocStatus;
