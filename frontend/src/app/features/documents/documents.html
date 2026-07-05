@@ -11,7 +11,23 @@
             title="Bộ lọc nâng cao: loại, đơn vị, người phụ trách, thời gian hết hạn">
       ⚑ Lọc nâng cao{{ store.hasAdvancedFilter() ? ' •' : '' }}
     </button>
+    <button class="chip export" (click)="exportCsv()" title="Xuất danh sách đang lọc ra CSV (mở bằng Excel)">
+      ⭳ Xuất CSV
+    </button>
   </div>
+
+  @if (selectedCount() > 0) {
+    <div class="bulk-bar">
+      <span class="bb-count">Đã chọn <b>{{ selectedCount() }}</b></span>
+      <input class="bb-date" type="date" [value]="bulkDate" [min]="minDate"
+             (change)="bulkDate = $any($event.target).value" title="Ngày gia hạn hàng loạt">
+      <button class="btn-primary sm" [disabled]="store.bulkBusy()" (click)="doBulkRenew()">Gia hạn</button>
+      @if (auth.isManager()) {
+        <button class="btn-primary sm" [disabled]="store.bulkBusy()" (click)="doBulkApprove()">Phê duyệt</button>
+      }
+      <button class="btn-ghost sm" (click)="store.clearSelection()">Bỏ chọn</button>
+    </div>
+  }
 
   @if (showFilters()) {
     <div class="filter-panel">
@@ -58,11 +74,13 @@
   }
 
   <div class="tgrid thead">
+    <span class="ck"><input type="checkbox" [checked]="allSelected()" (change)="toggleAll()" title="Chọn tất cả"></span>
     <span>Mã</span><span>Tên · Name</span><span>Loại</span><span>Đơn vị</span><span>Phụ trách</span><span>Hết hạn</span><span>Trạng thái</span>
   </div>
 
   @for (d of store.filtered(); track d.id) {
-    <div class="tgrid doc-row trow" (click)="store.selectedId.set(d.id)">
+    <div class="tgrid doc-row trow" [class.picked]="store.isSelected(d.id)" (click)="store.selectedId.set(d.id)">
+      <span class="ck"><input type="checkbox" [checked]="store.isSelected(d.id)" (click)="onRowCheck(d.id, $event)"></span>
       <span class="mono code">{{ d.code }}</span>
       <span class="cell-name">
         <span class="ric" [style.background]="d.badgeBg"><span [style.background]="d.stripe"></span></span>
@@ -78,6 +96,7 @@
     @if (store.loading()) {
       @for (i of [1, 2, 3, 4]; track i) {
         <div class="tgrid skel-row">
+          <span class="skel"></span>
           <span class="skel"></span>
           <span class="skel" style="width:85%"></span>
           <span class="skel"></span>

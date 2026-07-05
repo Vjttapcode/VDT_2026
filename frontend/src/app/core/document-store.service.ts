@@ -52,6 +52,10 @@ export class DocumentStore {
   readonly expiryFrom = signal('');                      // hết hạn từ (yyyy-mm-dd)
   readonly expiryTo = signal('');                        // hết hạn đến (yyyy-mm-dd)
 
+  /* ===== chọn nhiều để thao tác hàng loạt ===== */
+  readonly selectedIds = signal<Set<number>>(new Set());
+  readonly bulkBusy = signal(false);
+
   /* ===== derived ===== */
   readonly all = computed<DocView[]>(() => this.docs().map(d => this.present(d)));
 
@@ -233,6 +237,14 @@ export class DocumentStore {
     });
   }
 
+  /** Admin can thiệp văn bản: chỉ gửi các trường thay đổi. */
+  adminOverride(id: number, payload: Partial<{ status: DocStatus; expiryDate: string; ownerId: number; title: string; description: string }>): void {
+    this.http.patch<DocumentDto>(`${API}/${id}/admin`, payload).subscribe({
+      next: () => { this.afterMutation(id, 'Đã can thiệp văn bản (admin)'); this.loadHistory(id); },
+      error: err => this.toast('err', this.errText(err, 'Can thiệp thất bại'))
+    });
+  }
+
   /** Gia hạn tới ngày cụ thể do người dùng chọn từ calendar. */
   renewTo(id: number, isoDate: string): void {
     this.http.post<DocumentDto>(`${API}/${id}/renew`, { newExpiryDate: isoDate }).subscribe({
@@ -259,6 +271,64 @@ export class DocumentStore {
       next: () => this.afterMutation(id, 'Đã tải tệp lên'),
       error: err => this.toast('err', this.errText(err, 'Không tải được tệp lên'))
     });
+  }
+
+  /* ===== chọn nhiều / thao tác hàng loạt ===== */
+  toggleSelect(id: number): void {
+    this.selectedIds.update(s => {
+      const n = new Set(s);
+      n.has(id) ? n.delete(id) : n.add(id);
+      return n;
+    });
+  }
+  isSelected(id: number): boolean { return this.selectedIds().has(id); }
+  clearSelection(): void { this.selectedIds.set(new Set()); }
+  selectAllFiltered(): void { this.selectedIds.set(new Set(this.filtered().map(d => d.id))); }
+
+  /** Gia hạn hàng loạt tới cùng một ngày. */
+  bulkRenew(ids: number[], isoDate: string): void {
+    this.bulkAction('bulk/renew', { ids, newExpiryDate: isoDate }, 'gia hạn');
+  }
+  /** Phê duyệt hàng loạt. */
+  bulkApprove(ids: number[]): void {
+    this.bulkAction('bulk/approve', { ids }, 'phê duyệt');
+  }
+
+  private bulkAction(path: string, body: object, label: string): void {
+    this.bulkBusy.set(true);
+    this.http.post<{ ok: number; failed: number }>(`${API}/${path}`, body).subscribe({
+      next: r => {
+        this.bulkBusy.set(false);
+        this.clearSelection();
+        this.load();
+        this.toast(r.failed ? 'err' : 'ok',
+          `Đã ${label}: ${r.ok} thành công${r.failed ? `, ${r.failed} thất bại` : ''}`);
+      },
+      error: err => { this.bulkBusy.set(false); this.toast('err', this.errText(err, `Không ${label} được`)); }
+    });
+  }
+
+  /** Xuất danh sách văn bản đang lọc ra CSV (UTF-8 BOM để Excel đọc đúng tiếng Việt). */
+  exportCsv(): void {
+    const rows = this.filtered();
+    const headers = ['Mã', 'Tiêu đề', 'Loại', 'Cấp', 'Đơn vị', 'Người phụ trách', 'Ngày hết hạn', 'Trạng thái', 'Số lần gia hạn'];
+    const esc = (v: unknown) => {
+      const s = String(v ?? '');
+      return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    };
+    const lines = [headers.join(',')];
+    for (const d of rows) {
+      lines.push([d.code, d.title, d.typeVn, d.levelVn, d.deptName, d.ownerVn, d.expiryVn, d.statusVn, d.renewalCount]
+        .map(esc).join(','));
+    }
+    const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `van-ban-${fmtIso(new Date())}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    this.toast('ok', `Đã xuất ${rows.length} văn bản ra CSV`);
   }
 
   /** Xóa toàn bộ bộ lọc (ô tìm, trạng thái, và các bộ lọc nâng cao). */

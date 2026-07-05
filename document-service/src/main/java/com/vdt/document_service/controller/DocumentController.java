@@ -15,7 +15,16 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
+import java.util.ArrayList;
+
+import org.springframework.web.bind.annotation.PatchMapping;
+
+import com.vdt.document_service.dto.AdminAnalyticsDto;
+import com.vdt.document_service.dto.AdminOverrideRequest;
 import com.vdt.document_service.dto.AuditLogDto;
+import com.vdt.document_service.dto.BulkIdsRequest;
+import com.vdt.document_service.dto.BulkRenewRequest;
+import com.vdt.document_service.dto.BulkResult;
 import com.vdt.document_service.dto.DashboardStatsDto;
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
@@ -103,5 +112,41 @@ public class DocumentController {
     public DashboardStatsDto dashboardStats() {
         return service.dashboardStats();
     }
-    
+
+    /** Admin can thiệp một văn bản (sửa/đổi chủ sở hữu/ép trạng thái). */
+    @PatchMapping("/{id}/admin")
+    public DocumentResponse adminOverride(@PathVariable Long id, @RequestBody AdminOverrideRequest body) {
+        return service.adminOverride(id, body);
+    }
+
+    /** Số liệu phân tích toàn hệ thống (ADMIN). */
+    @GetMapping("/admin/analytics")
+    public AdminAnalyticsDto adminAnalytics() {
+        return service.adminAnalytics();
+    }
+
+    /** Gia hạn hàng loạt — mỗi văn bản một transaction riêng, lỗi văn bản này không ảnh hưởng văn bản khác. */
+    @PostMapping("/bulk/renew")
+    public BulkResult bulkRenew(@Valid @RequestBody BulkRenewRequest body) {
+        List<String> errors = new ArrayList<>();
+        int ok = 0;
+        for (Long id : body.ids()) {
+            try { service.renew(id, body.newExpiryDate()); ok++; }
+            catch (RuntimeException e) { errors.add("#" + id + ": " + e.getMessage()); }
+        }
+        return new BulkResult(ok, errors.size(), errors);
+    }
+
+    /** Phê duyệt hàng loạt. */
+    @PostMapping("/bulk/approve")
+    public BulkResult bulkApprove(@Valid @RequestBody BulkIdsRequest body) {
+        List<String> errors = new ArrayList<>();
+        int ok = 0;
+        for (Long id : body.ids()) {
+            try { service.approve(id); ok++; }
+            catch (RuntimeException e) { errors.add("#" + id + ": " + e.getMessage()); }
+        }
+        return new BulkResult(ok, errors.size(), errors);
+    }
+
 }

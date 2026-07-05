@@ -74,6 +74,12 @@
   .thead span:nth-child(7), .trow > span:nth-child(7) { display: none; }
 }
 
+.resend-btn {
+  margin-left: 8px; font-size: 10.5px; font-weight: 600; color: var(--blue, #3B6BB5);
+  background: #fff; border: 1px solid #D6DEF2; border-radius: 6px; padding: 3px 8px;
+  &:hover { background: #EEF2FC; }
+}
+
 /* mobile: bảng cuộn ngang TRONG card */
 @media (max-width: 640px) {
   .table-card { overflow-x: auto; }

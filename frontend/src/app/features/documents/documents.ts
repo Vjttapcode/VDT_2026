@@ -1,7 +1,8 @@
-import { Component, inject, signal } from '@angular/core';
+import { Component, computed, inject, signal } from '@angular/core';
 import { Router } from '@angular/router';
 import { DocumentStore, StatusFilter } from '../../core/document-store.service';
-import { DocType, TYPE_VN } from '../../core/models';
+import { AuthService } from '../../core/auth.service';
+import { DocType, TYPE_VN, fmtIso } from '../../core/models';
 
 @Component({
   selector: 'app-documents',
@@ -11,15 +12,44 @@ import { DocType, TYPE_VN } from '../../core/models';
 })
 export class DocumentsPage {
   readonly store = inject(DocumentStore);
+  readonly auth = inject(AuthService);
   private router = inject(Router);
 
   readonly typeVn = TYPE_VN;
   /** mở/đóng panel lọc nâng cao */
   readonly showFilters = signal(false);
 
+  /** ngày gia hạn hàng loạt — mặc định +6 tháng */
+  bulkDate = fmtIso(new Date(Date.now() + 180 * 86400000));
+  readonly minDate = fmtIso(new Date(Date.now() + 86400000));
+
+  readonly selectedCount = computed(() => this.store.selectedIds().size);
+  readonly allSelected = computed(() => {
+    const f = this.store.filtered();
+    return f.length > 0 && f.every(d => this.store.isSelected(d.id));
+  });
+
   goNew(): void {
     this.router.navigate(['/documents/new']);
   }
+
+  /* ===== chọn nhiều / hàng loạt / export ===== */
+  toggleAll(): void {
+    this.allSelected() ? this.store.clearSelection() : this.store.selectAllFiltered();
+  }
+  onRowCheck(id: number, event: Event): void {
+    event.stopPropagation();
+    this.store.toggleSelect(id);
+  }
+  doBulkRenew(): void {
+    const ids = [...this.store.selectedIds()];
+    if (ids.length && this.bulkDate >= this.minDate) this.store.bulkRenew(ids, this.bulkDate);
+  }
+  doBulkApprove(): void {
+    const ids = [...this.store.selectedIds()];
+    if (ids.length) this.store.bulkApprove(ids);
+  }
+  exportCsv(): void { this.store.exportCsv(); }
 
   readonly chips: { key: StatusFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },

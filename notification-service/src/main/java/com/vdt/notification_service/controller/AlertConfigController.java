@@ -40,11 +40,30 @@ public class AlertConfigController {
             throw new IllegalArgumentException("Ngưỡng cảnh báo phải trong 1..30 ngày");
         if (req.escalateDays() < 1 || req.escalateDays() >= req.warningDays())
             throw new IllegalArgumentException("Ngưỡng leo thang phải nhỏ hơn ngưỡng cảnh báo");
+        String remindDays = normalizeRemindDays(req.remindDays(), req.warningDays());
         cfg.setWarningDays(req.warningDays());
         cfg.setEscalateDays(req.escalateDays());
+        cfg.setRemindDays(remindDays);
         cfg.setEnabled(req.enabled());
         return repo.save(cfg);
     }
 
-    public record AlertConfigUpdateRequest(int warningDays, int escalateDays, boolean enabled) {}
+    /** Chuẩn hóa danh sách mốc nhắc: mỗi mốc 1..warningDays, sắp giảm dần, bỏ trùng. Rỗng cũng hợp lệ (nhắc mỗi ngày). */
+    private String normalizeRemindDays(String raw, int warningDays) {
+        if (raw == null || raw.isBlank()) return "";
+        var milestones = new java.util.TreeSet<Integer>(java.util.Comparator.reverseOrder());
+        for (String p : raw.split(",")) {
+            String t = p.trim();
+            if (t.isEmpty()) continue;
+            int v;
+            try { v = Integer.parseInt(t); }
+            catch (NumberFormatException e) { throw new IllegalArgumentException("Mốc nhắc không hợp lệ: " + t); }
+            if (v < 1 || v > warningDays)
+                throw new IllegalArgumentException("Mốc nhắc phải trong 1.." + warningDays + " ngày: " + v);
+            milestones.add(v);
+        }
+        return milestones.stream().map(String::valueOf).collect(java.util.stream.Collectors.joining(","));
+    }
+
+    public record AlertConfigUpdateRequest(int warningDays, int escalateDays, String remindDays, boolean enabled) {}
 }

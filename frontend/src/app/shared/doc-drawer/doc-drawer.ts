@@ -4,7 +4,7 @@ import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
 import { AuthService } from '../../core/auth.service';
 import { DocumentStore } from '../../core/document-store.service';
 import {
-  AUDIT_ACTION_COLOR, AUDIT_ACTION_VN, AuditAction, DocRelation, FIELD_VN,
+  AUDIT_ACTION_COLOR, AUDIT_ACTION_VN, AuditAction, DocRelation, DocStatus, FIELD_VN,
   REL_DIRECTION_VN, REL_TYPE_COLOR, REL_TYPE_VN, RelationType, fmtIso, toDate
 } from '../../core/models';
 
@@ -29,6 +29,12 @@ export class DocDrawer {
   readonly relateOpen = signal(false);
   relateTargetId: number | null = null;
   relateType: RelationType = 'REPLACE';
+
+  readonly overrideOpen = signal(false);
+  overrideStatus: DocStatus = 'ACTIVE';
+  overrideExpiry = '';
+  readonly statusOptions: DocStatus[] = ['DRAFT', 'PENDING', 'ACTIVE', 'WARNING', 'EXPIRED', 'REJECTED'];
+  readonly isAdmin = computed(() => this.auth.user()?.role === 'ADMIN');
 
   readonly minDate = fmtIso(new Date(Date.now() + 86400000)); // backend validate @Future
 
@@ -92,6 +98,7 @@ export class DocDrawer {
     this.relateOpen.set(false);
     this.relateTargetId = null;
     this.relateType = 'REPLACE';
+    this.overrideOpen.set(false);
   }
 
   openRelate(): void {
@@ -105,6 +112,20 @@ export class DocDrawer {
     if (!d || this.relateTargetId == null) return;
     this.store.relate(d.id, +this.relateTargetId, this.relateType);
     this.relateOpen.set(false);
+  }
+
+  openOverride(): void {
+    const d = this.doc();
+    if (!d) return;
+    this.overrideStatus = d.status;
+    this.overrideExpiry = d.expiryDate;
+    this.overrideOpen.set(true);
+  }
+  confirmOverride(): void {
+    const d = this.doc();
+    if (!d) return;
+    this.store.adminOverride(d.id, { status: this.overrideStatus, expiryDate: this.overrideExpiry });
+    this.overrideOpen.set(false);
   }
 
   /** nhãn quan hệ theo chiều, vd "Thay thế cho" / "Bị bãi bỏ bởi". */

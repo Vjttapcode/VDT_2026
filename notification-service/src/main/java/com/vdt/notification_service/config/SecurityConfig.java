@@ -1,4 +1,4 @@
-package com.vdt.auth_service.config;
+package com.vdt.notification_service.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -8,7 +8,7 @@ import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 
-import com.vdt.auth_service.security.JwtAuthenticationFilter;
+import com.vdt.notification_service.security.JwtAuthenticationFilter;
 
 @Configuration
 public class SecurityConfig {
@@ -19,17 +19,13 @@ public class SecurityConfig {
             .sessionManagement(s -> s.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(a -> a
                 .requestMatchers("/actuator/health").permitAll()   // healthcheck compose/K8s
-                .requestMatchers("/login").permitAll()
-                // /internal/** chỉ gọi trong docker network (không expose qua Nginx) -> để mở
-                .requestMatchers("/internal/**").permitAll()
-                .requestMatchers(HttpMethod.POST, "/register").hasRole("ADMIN")
-                .requestMatchers("/users/**").hasRole("ADMIN")
-                .requestMatchers("/companies/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.POST, "/departments").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.PUT, "/departments/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.DELETE, "/departments/**").hasRole("ADMIN")
-                .requestMatchers(HttpMethod.GET, "/departments")
+                .requestMatchers("/internal/**").permitAll()        // gọi nội bộ docker network
+                // chỉ ADMIN mới chỉnh ngưỡng + chạy các hành động quản trị cảnh báo
+                .requestMatchers("/api/notifications/admin/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.PUT, "/api/notifications/alert-configs/**").hasRole("ADMIN")
+                .requestMatchers(HttpMethod.GET, "/api/notifications/alert-configs/**")
                     .hasAnyRole("ADMIN", "MANAGER_COMPANY", "MANAGER_CENTER")
+                // nhật ký cảnh báo: mọi user đã đăng nhập đều xem được (UI lọc theo role)
                 .anyRequest().authenticated())
             .addFilterBefore(jwtFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

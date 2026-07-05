@@ -52,6 +52,9 @@
               [title]="l.errorMessage ?? ''">
           {{ l.status === 'SENT' ? 'Đã gửi' : 'Thất bại' }}
         </span>
+        @if (l.status === 'FAILED' && isAdmin()) {
+          <button class="resend-btn" (click)="resend(l.id, $event)" title="Gửi lại cảnh báo này">Gửi lại</button>
+        }
       </span>
     </div>
   } @empty {

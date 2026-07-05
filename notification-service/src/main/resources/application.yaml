@@ -33,6 +33,9 @@ spring:
 server:
   port: 8083
 
+jwt:
+  secret: ${JWT_SECRET:your-256-bit-secret-key-here-minimum-32-chars}
+
 document:
   service:
     url: ${DOCUMENT_SERVICE_URL:http://localhost:8082}

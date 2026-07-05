@@ -130,6 +130,26 @@
             </div>
           }
 
+          @if (isAdmin()) {
+            @if (overrideOpen()) {
+              <div class="action-box admin-box">
+                <div class="field-label">⚙ Can thiệp (Admin) — ép trạng thái & ngày hết hạn, ghi audit</div>
+                <div class="admin-fields">
+                  <select class="field-input" [(ngModel)]="overrideStatus">
+                    @for (s of statusOptions; track s) { <option [ngValue]="s">{{ s }}</option> }
+                  </select>
+                  <input class="field-input" type="date" [(ngModel)]="overrideExpiry">
+                </div>
+                <div class="box-actions">
+                  <button class="btn-ghost" (click)="overrideOpen.set(false)">Hủy</button>
+                  <button class="btn-primary" (click)="confirmOverride()">Áp dụng</button>
+                </div>
+              </div>
+            } @else {
+              <button class="admin-trigger" (click)="openOverride()">⚙ Can thiệp (Admin)…</button>
+            }
+          }
+
           <!-- ===== lịch sử thay đổi (audit log) ===== -->
           <div class="history-sec">
             <div class="hist-head">

@@ -3,6 +3,8 @@
   <!-- tab switcher -->
   <div class="tabs">
     <button class="chip" [class.on]="tab() === 'users'" (click)="tab.set('users')">Người dùng</button>
+    <button class="chip" [class.on]="tab() === 'org'" (click)="tab.set('org')">Tổ chức</button>
+    <button class="chip" [class.on]="tab() === 'analytics'" (click)="tab.set('analytics')">Phân tích</button>
     <button class="chip" [class.on]="tab() === 'configs'" (click)="tab.set('configs')">Ngưỡng cảnh báo</button>
   </div>
 
@@ -105,7 +107,11 @@
         } @else if (form.role === 'MANAGER_COMPANY') {
           <div>
             <div class="field-label">Công ty</div>
-            <input class="field-input" type="text" value="Công ty Viễn thông số VDT" disabled>
+            <select class="field-input" name="companyId" [(ngModel)]="form.companyId">
+              @for (co of admin.companies(); track co.id) {
+                <option [ngValue]="co.id">{{ co.name }}</option>
+              }
+            </select>
           </div>
         }
         <div class="submit-cell">
@@ -116,8 +122,128 @@
         </div>
       </form>
     </div>
+  } @else if (tab() === 'org') {
+    <!-- ===== TỔ CHỨC ===== -->
+    <div class="card create-card">
+      <div class="create-title">Thêm công ty</div>
+      <div class="org-form">
+        <input class="field-input" placeholder="Tên công ty" name="ncName" [(ngModel)]="newCompany.name">
+        <input class="field-input" placeholder="Mã (vd VDT)" name="ncCode" [(ngModel)]="newCompany.code">
+        <button class="btn-primary" (click)="submitCompany()">+ Tạo công ty</button>
+      </div>
+    </div>
+
+    @for (c of admin.companies(); track c.id) {
+      <div class="card org-company">
+        <div class="org-company-head">
+          @if (editingCompanyId() === c.id) {
+            <input class="field-input" name="ecName-{{ c.id }}" [(ngModel)]="editCompany.name">
+            <input class="field-input sm" name="ecCode-{{ c.id }}" [(ngModel)]="editCompany.code">
+            <button class="mini-btn ok" (click)="saveCompany(c)">✓</button>
+            <button class="mini-btn" (click)="editingCompanyId.set(null)">✕</button>
+          } @else {
+            <div class="org-company-name">{{ c.name }} <span class="mono org-code">{{ c.code }}</span></div>
+            <button class="mini-btn" (click)="startEditCompany(c)">Sửa</button>
+            @if (confirmCompanyId() === c.id) {
+              <button class="mini-btn warn" (click)="removeCompany(c)">Chắc chắn xóa?</button>
+              <button class="mini-btn" (click)="confirmCompanyId.set(null)">Hủy</button>
+            } @else {
+              <button class="mini-btn warn" (click)="confirmCompanyId.set(c.id)">Xóa</button>
+            }
+          }
+        </div>
+
+        <div class="org-depts">
+          @for (d of deptsOf(c.id); track d.id) {
+            <div class="org-dept">
+              @if (editingDeptId() === d.id) {
+                <input class="field-input" name="edName-{{ d.id }}" [(ngModel)]="editDept.name">
+                <input class="field-input sm" name="edCode-{{ d.id }}" [(ngModel)]="editDept.code">
+                <select class="field-input sm" name="edCo-{{ d.id }}" [(ngModel)]="editDept.companyId">
+                  @for (co of admin.companies(); track co.id) { <option [ngValue]="co.id">{{ co.name }}</option> }
+                </select>
+                <button class="mini-btn ok" (click)="saveDept(d)">✓</button>
+                <button class="mini-btn" (click)="editingDeptId.set(null)">✕</button>
+              } @else {
+                <span class="org-dept-name">{{ d.name }} <span class="mono org-code">{{ d.code }}</span></span>
+                <button class="mini-btn" (click)="startEditDept(d)">Sửa</button>
+                @if (confirmDeptId() === d.id) {
+                  <button class="mini-btn warn" (click)="removeDept(d)">Chắc chắn xóa?</button>
+                  <button class="mini-btn" (click)="confirmDeptId.set(null)">Hủy</button>
+                } @else {
+                  <button class="mini-btn warn" (click)="confirmDeptId.set(d.id)">Xóa</button>
+                }
+              }
+            </div>
+          } @empty {
+            <div class="org-empty">Chưa có trung tâm nào.</div>
+          }
+
+          <div class="org-dept add">
+            <input class="field-input" placeholder="Tên trung tâm mới" name="ndName-{{ c.id }}" [(ngModel)]="newDept.name">
+            <input class="field-input sm" placeholder="Mã" name="ndCode-{{ c.id }}" [(ngModel)]="newDept.code">
+            <button class="mini-btn ok" (click)="submitDept(c.id)">+ Thêm trung tâm</button>
+          </div>
+        </div>
+      </div>
+    } @empty {
+      <div class="empty">Chưa có công ty nào — tạo công ty đầu tiên ở trên.</div>
+    }
+  } @else if (tab() === 'analytics') {
+    <!-- ===== PHÂN TÍCH ===== -->
+    @if (analytics(); as a) {
+      <div class="stat-cards">
+        <div class="card stat"><div class="stat-num mono">{{ a.total }}</div><div class="stat-lb">Tổng văn bản</div></div>
+        <div class="card stat"><div class="stat-num mono" style="color:#1E8E5A">{{ a.byStatus['ACTIVE'] || 0 }}</div><div class="stat-lb">Còn hiệu lực</div></div>
+        <div class="card stat"><div class="stat-num mono" style="color:#E0A22E">{{ a.byStatus['WARNING'] || 0 }}</div><div class="stat-lb">Sắp hết hạn</div></div>
+        <div class="card stat"><div class="stat-num mono" style="color:#C62B26">{{ a.byStatus['EXPIRED'] || 0 }}</div><div class="stat-lb">Đã hết hạn</div></div>
+        @if (alertStats(); as s) {
+          <div class="card stat"><div class="stat-num mono" style="color:#1E8E5A">{{ s.sent }}</div><div class="stat-lb">Email đã gửi (30n)</div></div>
+          <div class="card stat"><div class="stat-num mono" style="color:#C62B26">{{ s.failed }}</div><div class="stat-lb">Email lỗi (30n)</div></div>
+        }
+      </div>
+
+      <div class="card analytics-card">
+        <div class="ac-title">Xu hướng hết hạn theo tháng ({{ monthLabels.length }} tháng năm nay)</div>
+        <div class="bar-chart">
+          @for (v of a.monthlyExpiry; track $index) {
+            <div class="bar-col">
+              <div class="bar" [style.height.px]="4 + (v / maxMonthly()) * 120" [title]="v + ' văn bản'"></div>
+              <div class="bar-lb">{{ monthLabels[$index] }}</div>
+            </div>
+          }
+        </div>
+      </div>
+
+      <div class="card analytics-card">
+        <div class="ac-title">Theo phòng ban</div>
+        <div class="tgrid thead org-thead">
+          <span>Phòng ban</span><span>Tổng</span><span>Sắp hết hạn</span><span>Đã hết hạn</span>
+        </div>
+        @for (d of a.byDepartment; track d.departmentId) {
+          <div class="tgrid org-thead trow">
+            <span class="sm">{{ deptNameById(d.departmentId) }}</span>
+            <span class="mono">{{ d.total }}</span>
+            <span class="mono" style="color:#9A6400">{{ d.expiringSoon }}</span>
+            <span class="mono" style="color:#C62B26">{{ d.expired }}</span>
+          </div>
+        }
+      </div>
+    } @else {
+      <div class="empty">Đang tải số liệu phân tích…</div>
+    }
   } @else {
     <!-- ===== ALERT CONFIGS ===== -->
+    <div class="config-toolbar">
+      <span class="ct-text">Chạy quét cảnh báo thủ công (thay vì chờ cron 8h sáng)</span>
+      <div class="ct-actions">
+        <button class="btn-ghost" (click)="sendTest()">✉ Gửi email thử</button>
+        <button class="btn-primary" (click)="runCheck()" [disabled]="running()">
+          @if (running()) { <span class="spinner"></span> }
+          ⟳ Chạy quét ngay
+        </button>
+      </div>
+    </div>
     <div class="config-grid">
       @for (c of configs(); track c.id) {
         <div class="card config-card" [class.disabled]="!c.enabled">
@@ -145,8 +271,15 @@
             </div>
           </div>
 
+          <div>
+            <div class="field-label">Mốc nhắc (ngày, cách nhau bởi dấu phẩy)</div>
+            <input class="field-input" type="text" placeholder="30,15,7,1 — để trống = nhắc mỗi ngày"
+                   name="remind-{{ c.id }}" [(ngModel)]="c.remindDays" [disabled]="!c.enabled">
+          </div>
+
           <div class="config-note">
-            Còn ≤ <b class="mono">{{ c.warningDays }}</b> ngày: nhắc chủ sở hữu.
+            Còn ≤ <b class="mono">{{ c.warningDays }}</b> ngày: nhắc chủ sở hữu (chỉ ở mốc
+            <b class="mono">{{ c.remindDays || 'mỗi ngày' }}</b>).
             Còn ≤ <b class="mono">{{ c.escalateDays }}</b> ngày: báo thêm quản lý cấp trên.
           </div>
 

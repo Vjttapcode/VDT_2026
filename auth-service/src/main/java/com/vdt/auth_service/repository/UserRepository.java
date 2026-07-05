@@ -17,4 +17,9 @@ public interface UserRepository extends JpaRepository<User, Long> {
     Optional<User> findFirstByDepartmentIdAndRole(Long departmentId, Role role);
 
     Optional<User> findFirstByCompanyIdAndRole(Long companyId, Role role);
+
+    // guard xóa công ty / trung tâm
+    boolean existsByCompanyId(Long companyId);
+
+    boolean existsByDepartmentId(Long departmentId);
 }

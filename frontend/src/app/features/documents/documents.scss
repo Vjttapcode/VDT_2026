@@ -44,9 +44,23 @@
 }
 
 .tgrid {
-  display: grid; grid-template-columns: 110px 1fr 92px 148px 128px 100px 116px;
+  display: grid; grid-template-columns: 34px 104px 1fr 88px 140px 122px 96px 112px;
   align-items: center; gap: 12px; padding: 12px 20px;
 }
+.ck { display: flex; align-items: center; justify-content: center;
+  input { width: 15px; height: 15px; cursor: pointer; accent-color: var(--red-light); }
+}
+.trow.picked { background: rgba(226,47,41,.05); }
+
+/* thanh thao tác hàng loạt */
+.bulk-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 10px 20px; background: #FBF9FB; border-bottom: 1px solid #F0ECF0;
+  .bb-count { font-size: 12.5px; color: var(--ink-2); }
+  .bb-date { font-size: 12.5px; border: 1px solid #E2DEE4; border-radius: 7px; padding: 6px 8px; }
+  .btn-primary.sm, .btn-ghost.sm { font-size: 12px; padding: 6px 12px; }
+}
+.chip.export { background: #fff; border-color: #E2DEE4; }
 .thead {
   padding: 11px 20px; font-size: 10px; font-weight: 600; color: var(--muted-2);
   letter-spacing: .3px; text-transform: uppercase;

@@ -2,6 +2,7 @@ import { Component, OnInit, computed, inject } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { NotificationService } from '../../core/notification.service';
 import { DocumentStore } from '../../core/document-store.service';
+import { AuthService } from '../../core/auth.service';
 import { DEPT_VN, STATUS_THEME, fmtDate, toDate } from '../../core/models';
 
 @Component({
@@ -13,6 +14,9 @@ import { DEPT_VN, STATUS_THEME, fmtDate, toDate } from '../../core/models';
 export class AlertLogPage implements OnInit {
   readonly noti = inject(NotificationService);
   readonly store = inject(DocumentStore);
+  readonly auth = inject(AuthService);
+
+  readonly isAdmin = computed(() => this.auth.user()?.role === 'ADMIN');
 
   readonly depts = Object.entries(DEPT_VN).map(([id, name]) => ({ id: +id, name }));
   readonly warnTheme = STATUS_THEME['WARNING'];
@@ -71,5 +75,14 @@ export class AlertLogPage implements OnInit {
 
   openDoc(id: number): void {
     if (this.docTitles().has(id)) this.store.selectedId.set(id);
+  }
+
+  /** Admin gửi lại một cảnh báo thất bại. */
+  resend(logId: number, event: Event): void {
+    event.stopPropagation();
+    this.noti.resend(logId).subscribe({
+      next: () => this.store.toast('ok', 'Đã đưa cảnh báo vào hàng đợi gửi lại'),
+      error: err => this.store.toast('err', err.error?.message ?? 'Gửi lại thất bại')
+    });
   }
 }

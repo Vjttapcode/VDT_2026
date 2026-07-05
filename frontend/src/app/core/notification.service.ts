@@ -22,6 +22,7 @@ export interface AlertConfig {
   documentLevel: DocLevel;
   warningDays: number;
   escalateDays: number;
+  remindDays: string;   // mốc nhắc, vd "30,15,7,1"
   enabled: boolean;
 }
 
@@ -62,7 +63,29 @@ export class NotificationService {
     return this.http.put<AlertConfig>(`/api/notifications/alert-configs/${c.id}`, {
       warningDays: c.warningDays,
       escalateDays: c.escalateDays,
+      remindDays: c.remindDays,
       enabled: c.enabled
     });
+  }
+
+  /** Admin chạy quét cảnh báo ngay (thay vì chờ cron 8h). Trả số alert đã enqueue. */
+  runCheck(): Observable<{ status: string; enqueued: number }> {
+    return this.http.post<{ status: string; enqueued: number }>('/api/notifications/admin/run-check', {});
+  }
+
+  /** Gửi lại một cảnh báo đã FAILED. */
+  resend(logId: number): Observable<{ status: string }> {
+    return this.http.post<{ status: string }>(`/api/notifications/admin/resend/${logId}`, {});
+  }
+
+  /** Gửi email cảnh báo thử (mặc định về hòm thư admin). */
+  sendTest(email?: string): Observable<{ status: string; email: string }> {
+    return this.http.post<{ status: string; email: string }>('/api/notifications/admin/test', { email: email ?? null });
+  }
+
+  /** Thống kê gửi cảnh báo 30 ngày gần nhất (ADMIN). */
+  stats(): Observable<{ total: number; sent: number; failed: number; warning: number; expired: number }> {
+    return this.http.get<{ total: number; sent: number; failed: number; warning: number; expired: number }>(
+      '/api/notifications/admin/stats');
   }
 }

@@ -1,5 +1,49 @@
 .admin-wrap { display: flex; flex-direction: column; gap: 20px; }
 
+.config-toolbar {
+  display: flex; align-items: center; justify-content: space-between; gap: 14px; flex-wrap: wrap;
+  background: #fff; border: 1px solid var(--border, #EBE6EB); border-radius: 12px; padding: 14px 18px;
+  .ct-text { font-size: 12.5px; color: var(--ink-3); }
+  .ct-actions { display: flex; gap: 8px; align-items: center; }
+}
+
+/* ===== Tổ chức ===== */
+.org-form { display: flex; gap: 10px; flex-wrap: wrap; align-items: center;
+  .field-input { flex: 1; min-width: 160px; }
+  .btn-primary { flex: none; }
+}
+.field-input.sm { max-width: 130px; }
+.org-company { padding: 16px 18px; }
+.org-company-head {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding-bottom: 12px; border-bottom: 1px solid #F0ECF0;
+  .org-company-name { font-size: 14px; font-weight: 700; color: var(--ink); flex: 1; }
+  .org-code { font-size: 11px; font-weight: 500; color: var(--blue); margin-left: 6px; }
+}
+.org-depts { display: flex; flex-direction: column; gap: 8px; margin-top: 12px; }
+.org-dept {
+  display: flex; align-items: center; gap: 8px; flex-wrap: wrap;
+  padding: 8px 12px; background: #FAF8FA; border: 1px solid #F0ECF0; border-radius: 9px;
+  .org-dept-name { flex: 1; font-size: 12.5px; color: var(--ink-2); font-weight: 600; }
+  .org-code { font-size: 10.5px; color: var(--blue); margin-left: 6px; }
+  &.add { background: #fff; border-style: dashed; }
+}
+.org-empty { font-size: 12px; color: var(--muted-2); padding: 4px 2px; }
+
+/* ===== Phân tích ===== */
+.stat-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 14px; }
+.stat { padding: 16px 18px; text-align: center;
+  .stat-num { font-size: 26px; font-weight: 700; color: var(--ink); }
+  .stat-lb { font-size: 11.5px; color: var(--muted-2); margin-top: 4px; }
+}
+.analytics-card { padding: 18px 20px; }
+.ac-title { font-size: 13px; font-weight: 700; color: var(--ink); margin-bottom: 14px; }
+.bar-chart { display: flex; align-items: flex-end; gap: 8px; height: 150px; padding-top: 8px; }
+.bar-col { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; gap: 6px; }
+.bar { width: 60%; min-height: 4px; border-radius: 4px 4px 0 0; background: var(--red-light, #EE3A33); }
+.bar-lb { font-size: 10px; color: var(--muted-2); }
+.org-thead { grid-template-columns: 2fr 1fr 1fr 1fr !important; }
+
 .tabs { display: flex; gap: 8px; }
 .chip {
   font-size: 12.5px; font-weight: 600; color: var(--ink-3);

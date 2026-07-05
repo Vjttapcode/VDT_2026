@@ -43,6 +43,11 @@ public class AlertConfig {
     @Column(name = "escalate_days", nullable = false)
     private int escalateDays = 7;
 
+    /** Các mốc ngày trước hết hạn sẽ gửi nhắc, vd "30,15,7,1". Rỗng = nhắc mỗi ngày trong warningDays. */
+    @Builder.Default
+    @Column(name = "remind_days", nullable = false)
+    private String remindDays = "30,15,7,1";
+
     @Builder.Default
     @Column(nullable = false)
     private boolean enabled = true;

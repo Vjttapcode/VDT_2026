@@ -29,12 +29,27 @@ export interface DepartmentDto {
   companyId: number;
 }
 
+export interface CompanyDto {
+  id: number;
+  name: string;
+  code: string;
+}
+
+export interface AdminAnalytics {
+  total: number;
+  byStatus: Record<string, number>;
+  byType: Record<string, number>;
+  byDepartment: { departmentId: number; total: number; expiringSoon: number; expired: number }[];
+  monthlyExpiry: number[];
+}
+
 @Injectable({ providedIn: 'root' })
 export class AdminService {
   private http = inject(HttpClient);
 
   readonly users = signal<UserDto[]>([]);
   readonly departments = signal<DepartmentDto[]>([]);
+  readonly companies = signal<CompanyDto[]>([]);
   readonly loading = signal(false);
   readonly loadError = signal<string | null>(null);
 
@@ -57,6 +72,10 @@ export class AdminService {
       next: depts => this.departments.set(depts),
       error: () => {} // fallback DEPT_VN tĩnh trong models.ts
     });
+    this.http.get<CompanyDto[]>('/api/auth/companies').subscribe({
+      next: cs => this.companies.set(cs),
+      error: () => {}
+    });
   }
 
   register(req: RegisterRequest): Observable<UserDto> {
@@ -65,5 +84,32 @@ export class AdminService {
 
   update(u: UserDto): Observable<UserDto> {
     return this.http.put<UserDto>(`/api/auth/users/${u.id}`, u);
+  }
+
+  /* ===== Công ty ===== */
+  createCompany(c: Omit<CompanyDto, 'id'>): Observable<CompanyDto> {
+    return this.http.post<CompanyDto>('/api/auth/companies', c);
+  }
+  updateCompany(c: CompanyDto): Observable<CompanyDto> {
+    return this.http.put<CompanyDto>(`/api/auth/companies/${c.id}`, c);
+  }
+  deleteCompany(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/auth/companies/${id}`);
+  }
+
+  /* ===== Phân tích ===== */
+  analytics(): Observable<AdminAnalytics> {
+    return this.http.get<AdminAnalytics>('/api/documents/admin/analytics');
+  }
+
+  /* ===== Trung tâm ===== */
+  createDepartment(d: Omit<DepartmentDto, 'id'>): Observable<DepartmentDto> {
+    return this.http.post<DepartmentDto>('/api/auth/departments', d);
+  }
+  updateDepartment(d: DepartmentDto): Observable<DepartmentDto> {
+    return this.http.put<DepartmentDto>(`/api/auth/departments/${d.id}`, d);
+  }
+  deleteDepartment(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/auth/departments/${id}`);
   }
 }

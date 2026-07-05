@@ -24,6 +24,8 @@ import org.springframework.web.multipart.MultipartFile;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.vdt.document_service.client.AuthClient;
+import com.vdt.document_service.dto.AdminAnalyticsDto;
+import com.vdt.document_service.dto.AdminOverrideRequest;
 import com.vdt.document_service.dto.AuditLogDto;
 import com.vdt.document_service.dto.DashboardStatsDto;
 import com.vdt.document_service.dto.DocumentRequest;
@@ -376,6 +378,78 @@ public class DocumentService {
             throw new BusinessException("Không đổi trạng thái từ " + doc.getStatus());
         doc.setStatus(newStatus);
         return DocumentResponse.from(repo.save(doc));
+    }
+
+    /** Admin can thiệp: sửa mọi trường ở mọi trạng thái, reassign owner, ép status; ghi audit đầy đủ. */
+    @Transactional
+    public DocumentResponse adminOverride(Long id, AdminOverrideRequest req) {
+        if (!"ADMIN".equals(SecurityUtil.currentRole()))
+            throw new ForbiddenException("Chỉ ADMIN mới được can thiệp văn bản");
+        Document doc = findOrThrow(id);
+        Map<String, Object> changes = new LinkedHashMap<>();
+        if (req.title() != null && !req.title().equals(doc.getTitle())) {
+            changes.put("title", pair(doc.getTitle(), req.title())); doc.setTitle(req.title());
+        }
+        if (req.description() != null && !Objects.equals(req.description(), doc.getDescription())) {
+            changes.put("description", pair(doc.getDescription(), req.description())); doc.setDescription(req.description());
+        }
+        if (req.type() != null && req.type() != doc.getType()) {
+            changes.put("type", pair(doc.getType().name(), req.type().name())); doc.setType(req.type());
+        }
+        if (req.level() != null && req.level() != doc.getLevel()) {
+            changes.put("level", pair(doc.getLevel().name(), req.level().name())); doc.setLevel(req.level());
+        }
+        if (req.expiryDate() != null && !req.expiryDate().equals(doc.getExpiryDate())) {
+            changes.put("expiryDate", pair(str(doc.getExpiryDate()), str(req.expiryDate()))); doc.setExpiryDate(req.expiryDate());
+        }
+        if (req.ownerId() != null && !req.ownerId().equals(doc.getOwnerId())) {
+            changes.put("ownerId", pair(doc.getOwnerId(), req.ownerId())); doc.setOwnerId(req.ownerId());
+        }
+        if (req.status() != null && req.status() != doc.getStatus()) {
+            changes.put("status", pair(doc.getStatus().name(), req.status().name())); doc.setStatus(req.status());
+        }
+        Document saved = repo.save(doc);
+        if (!changes.isEmpty())
+            saveLog(id, "ADMIN_OVERRIDE", SecurityUtil.currentUserId(), null, "Can thiệp bởi quản trị", toJson(changes));
+        return DocumentResponse.from(saved, authClient.getName(saved.getOwnerId()));
+    }
+
+    /** Phân tích toàn hệ thống cho ADMIN: theo trạng thái/loại/phòng ban + xu hướng hết hạn theo tháng. */
+    @Transactional(readOnly = true)
+    public AdminAnalyticsDto adminAnalytics() {
+        if (!"ADMIN".equals(SecurityUtil.currentRole()))
+            throw new ForbiddenException("Chỉ ADMIN xem được phân tích toàn hệ thống");
+        List<Document> docs = repo.findAll();
+        Map<String, Long> byStatus = docs.stream()
+                .collect(Collectors.groupingBy(d -> d.getStatus().name(), Collectors.counting()));
+        Map<String, Long> byType = docs.stream()
+                .collect(Collectors.groupingBy(d -> d.getType().name(), Collectors.counting()));
+
+        LocalDate today = LocalDate.now();
+        LocalDate limit = today.plusDays(30);
+        Map<Long, List<Document>> byDept = docs.stream()
+                .filter(d -> d.getDepartmentId() != null)
+                .collect(Collectors.groupingBy(Document::getDepartmentId));
+        List<AdminAnalyticsDto.DeptStat> deptStats = byDept.entrySet().stream()
+                .map(e -> {
+                    long total = e.getValue().size();
+                    long expired = e.getValue().stream()
+                            .filter(d -> d.getExpiryDate() != null && d.getExpiryDate().isBefore(today)).count();
+                    long soon = e.getValue().stream()
+                            .filter(d -> d.getExpiryDate() != null
+                                    && !d.getExpiryDate().isBefore(today) && !d.getExpiryDate().isAfter(limit)).count();
+                    return new AdminAnalyticsDto.DeptStat(e.getKey(), total, soon, expired);
+                })
+                .sorted(Comparator.comparing(AdminAnalyticsDto.DeptStat::departmentId))
+                .toList();
+
+        long[] monthly = new long[12];
+        int year = today.getYear();
+        for (Document d : docs)
+            if (d.getExpiryDate() != null && d.getExpiryDate().getYear() == year)
+                monthly[d.getExpiryDate().getMonthValue() - 1]++;
+
+        return new AdminAnalyticsDto(docs.size(), byStatus, byType, deptStats, monthly);
     }
 
     // ---- helpers --------------------------------------------------
