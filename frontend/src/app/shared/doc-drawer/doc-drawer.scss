@@ -175,6 +175,36 @@
   .chg-new { color: #1B7F50; font-weight: 600; }
 }
 
+/* ===== popup xác nhận: phê duyệt / từ chối / gia hạn ===== */
+.confirm-overlay {
+  position: fixed; inset: 0; background: rgba(20, 16, 18, .48);
+  z-index: 60; animation: fadeIn .16s ease;
+  display: flex; align-items: center; justify-content: center; padding: 20px;
+}
+.confirm-card {
+  width: min(380px, 100%);
+  background: #fff; border-radius: 16px; padding: 22px;
+  box-shadow: 0 24px 60px rgba(20, 16, 18, .32);
+  animation: popIn .18s var(--ease-out);
+  textarea, input { margin-top: 2px; }
+}
+.confirm-icon {
+  width: 42px; height: 42px; border-radius: 50%;
+  display: flex; align-items: center; justify-content: center;
+  font-size: 18px; font-weight: 700; margin-bottom: 12px;
+  &.ok     { background: rgba(30, 142, 90, .14); color: var(--green); }
+  &.danger { background: rgba(226, 47, 41, .12); color: var(--red-dark); }
+  &.info   { background: rgba(59, 107, 181, .14); color: var(--blue); }
+}
+.confirm-title { font-size: 16px; font-weight: 700; color: var(--ink); }
+.confirm-desc {
+  font-size: 12.5px; color: var(--ink-3); line-height: 1.55; margin-top: 6px;
+  b { color: var(--ink-2); }
+}
+.confirm-actions { display: flex; gap: 8px; justify-content: flex-end; margin-top: 18px; }
+.confirm-ok     { background: var(--green); &:hover { background: #19794D; } }
+.confirm-danger { background: var(--red-dark); &:hover { background: #A82420; } }
+
 @media (max-width: 720px) {
   .overlay { padding: 10px; }
   .meta-grid { grid-template-columns: 1fr 1fr; }

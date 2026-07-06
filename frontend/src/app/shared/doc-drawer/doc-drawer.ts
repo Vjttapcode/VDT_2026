@@ -20,10 +20,10 @@ export class DocDrawer {
   readonly auth = inject(AuthService);
   private sanitizer = inject(DomSanitizer);
 
-  readonly rejecting = signal(false);
+  /** popup xác nhận cho gia hạn / phê duyệt / từ chối — chỉ 1 mở tại 1 thời điểm */
+  readonly actionModal = signal<'approve' | 'reject' | 'renew' | null>(null);
   readonly rejectReason = signal('');
   readonly confirmingDelete = signal(false);
-  readonly renewOpen = signal(false);
   renewDate = '';
 
   readonly relateOpen = signal(false);
@@ -98,10 +98,9 @@ export class DocDrawer {
 
   close(): void {
     this.store.selectedId.set(null);
-    this.rejecting.set(false);
+    this.actionModal.set(null);
     this.rejectReason.set('');
     this.confirmingDelete.set(false);
-    this.renewOpen.set(false);
     this.relateOpen.set(false);
     this.relateTargetId = null;
     this.relateType = 'REPLACE';
@@ -213,29 +212,49 @@ export class DocDrawer {
     input.value = '';
   }
 
+  openApprove(): void {
+    this.actionModal.set('approve');
+  }
+
+  openReject(): void {
+    this.rejectReason.set('');
+    this.actionModal.set('reject');
+  }
+
   openRenew(): void {
     const d = this.doc();
     if (!d) return;
     // gợi ý mặc định: +6 tháng kể từ hạn hiện tại (tối thiểu từ hôm nay)
     const base = Math.max(toDate(d.expiryDate).getTime(), Date.now());
     this.renewDate = fmtIso(new Date(base + 180 * 86400000));
-    this.renewOpen.set(true);
+    this.actionModal.set('renew');
+  }
+
+  closeActionModal(): void {
+    this.actionModal.set(null);
+  }
+
+  confirmApprove(): void {
+    const d = this.doc();
+    if (!d) return;
+    this.store.approve(d.id);
+    this.actionModal.set(null);
+  }
+
+  confirmReject(): void {
+    const d = this.doc();
+    const reason = this.rejectReason().trim();
+    if (!d || !reason) return;
+    this.store.reject(d.id, reason);
+    this.actionModal.set(null);
+    this.rejectReason.set('');
   }
 
   confirmRenew(): void {
     const d = this.doc();
     if (!d || !this.renewDate || this.renewDate < this.minDate) return;
     this.store.renewTo(d.id, this.renewDate);
-    this.renewOpen.set(false);
-  }
-
-  sendReject(): void {
-    const d = this.doc();
-    const reason = this.rejectReason().trim();
-    if (!d || !reason) return;
-    this.store.reject(d.id, reason);
-    this.rejecting.set(false);
-    this.rejectReason.set('');
+    this.actionModal.set(null);
   }
 
   doDelete(): void {

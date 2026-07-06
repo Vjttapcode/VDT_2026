@@ -109,32 +109,6 @@
             </div>
           }
 
-          @if (renewOpen()) {
-            <div class="action-box">
-              <div class="field-label">Gia hạn tới ngày</div>
-              <input class="field-input" type="date" name="renewDate"
-                     [(ngModel)]="renewDate" [min]="minDate">
-              <div class="box-actions">
-                <button class="btn-ghost" (click)="renewOpen.set(false)">Hủy</button>
-                <button class="btn-primary" [disabled]="!renewDate || renewDate < minDate"
-                        (click)="confirmRenew()">Xác nhận gia hạn</button>
-              </div>
-            </div>
-          }
-
-          @if (rejecting()) {
-            <div class="action-box">
-              <div class="field-label">Lý do từ chối</div>
-              <textarea class="field-input" rows="3" [value]="rejectReason()"
-                        (input)="rejectReason.set($any($event.target).value)"
-                        placeholder="Nhập lý do…"></textarea>
-              <div class="box-actions">
-                <button class="btn-ghost" (click)="rejecting.set(false)">Hủy</button>
-                <button class="btn-primary" [disabled]="!rejectReason().trim()" (click)="sendReject()">Xác nhận từ chối</button>
-              </div>
-            </div>
-          }
-
           @if (confirmingDelete()) {
             <div class="action-box delete-box">
               <span>Xóa vĩnh viễn văn bản này?</span>
@@ -237,8 +211,8 @@
 
       <div class="modal-foot">
         @if (canApprove()) {
-          <button class="btn-primary grow" (click)="store.approve(d.id)">✓ Phê duyệt</button>
-          <button class="btn-ghost" (click)="rejecting.set(true)">Từ chối</button>
+          <button class="btn-primary grow" (click)="openApprove()">✓ Phê duyệt</button>
+          <button class="btn-ghost" (click)="openReject()">Từ chối</button>
         } @else if (canSubmit()) {
           <button class="btn-primary grow" (click)="store.submit(d.id)">Gửi duyệt</button>
           <button class="btn-ghost" (click)="confirmingDelete.set(true)">Xóa</button>
@@ -254,4 +228,49 @@
       </div>
     </div>
   </div>
+
+  <!-- ===== popup xác nhận: phê duyệt / từ chối / gia hạn ===== -->
+  @if (actionModal(); as am) {
+    <div class="confirm-overlay" (click)="closeActionModal()">
+      <div class="confirm-card" (click)="$event.stopPropagation()">
+        @switch (am) {
+          @case ('approve') {
+            <div class="confirm-icon ok">✓</div>
+            <div class="confirm-title">Phê duyệt văn bản?</div>
+            <div class="confirm-desc">Xác nhận phê duyệt <b>{{ d.code }} · {{ d.title }}</b>. Văn bản sẽ chuyển sang trạng thái hiệu lực theo ngày đã đặt.</div>
+            <div class="confirm-actions">
+              <button class="btn-ghost" (click)="closeActionModal()">Hủy</button>
+              <button class="btn-primary confirm-ok" (click)="confirmApprove()">Phê duyệt</button>
+            </div>
+          }
+          @case ('reject') {
+            <div class="confirm-icon danger">✕</div>
+            <div class="confirm-title">Từ chối văn bản?</div>
+            <div class="confirm-desc">Nêu rõ lý do để người tạo <b>{{ d.code }} · {{ d.title }}</b> chỉnh sửa lại.</div>
+            <div class="field-label" style="margin-top:8px">Lý do từ chối</div>
+            <textarea class="field-input" rows="3" [value]="rejectReason()"
+                      (input)="rejectReason.set($any($event.target).value)"
+                      placeholder="Nhập lý do…" autofocus></textarea>
+            <div class="confirm-actions">
+              <button class="btn-ghost" (click)="closeActionModal()">Hủy</button>
+              <button class="btn-primary confirm-danger" [disabled]="!rejectReason().trim()"
+                      (click)="confirmReject()">Từ chối</button>
+            </div>
+          }
+          @case ('renew') {
+            <div class="confirm-icon info">↻</div>
+            <div class="confirm-title">Gia hạn văn bản</div>
+            <div class="confirm-desc">Chọn ngày hết hạn mới cho <b>{{ d.code }} · {{ d.title }}</b>.</div>
+            <div class="field-label" style="margin-top:8px">Gia hạn tới ngày</div>
+            <input class="field-input" type="date" name="renewDate" [(ngModel)]="renewDate" [min]="minDate">
+            <div class="confirm-actions">
+              <button class="btn-ghost" (click)="closeActionModal()">Hủy</button>
+              <button class="btn-primary" [disabled]="!renewDate || renewDate < minDate"
+                      (click)="confirmRenew()">Xác nhận gia hạn</button>
+            </div>
+          }
+        }
+      </div>
+    </div>
+  }
 }
