@@ -1,6 +1,7 @@
 import { Component, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { DomSanitizer, SafeResourceUrl } from '@angular/platform-browser';
+import { Router } from '@angular/router';
 import { AuthService } from '../../core/auth.service';
 import { DocumentStore } from '../../core/document-store.service';
 import {
@@ -19,6 +20,7 @@ export class DocDrawer {
   readonly store = inject(DocumentStore);
   readonly auth = inject(AuthService);
   private sanitizer = inject(DomSanitizer);
+  private router = inject(Router);
 
   /** popup xác nhận cho gia hạn / phê duyệt / từ chối — chỉ 1 mở tại 1 thời điểm */
   readonly actionModal = signal<'approve' | 'reject' | 'renew' | null>(null);
@@ -76,6 +78,11 @@ export class DocDrawer {
     const s = this.doc()?.dispStatus;
     return (s === 'DRAFT' || s === 'REJECTED') && this.isOwner();
   });
+  /** DRAFT/REJECTED: chủ sở hữu hoặc admin/manager (backend còn kiểm tra đúng phạm vi tổ chức). */
+  readonly canEdit = computed(() => {
+    const s = this.doc()?.dispStatus;
+    return (s === 'DRAFT' || s === 'REJECTED') && (this.isOwner() || this.auth.isManager());
+  });
   readonly canRenew = computed(() => {
     const s = this.doc()?.dispStatus;
     return s === 'ACTIVE' || s === 'WARNING' || s === 'EXPIRED';
@@ -106,6 +113,13 @@ export class DocDrawer {
     this.relateType = 'REPLACE';
     this.overrideOpen.set(false);
     this.effectiveOpen.set(false);
+  }
+
+  goEdit(): void {
+    const d = this.doc();
+    if (!d) return;
+    this.router.navigate(['/documents', d.id, 'edit']);
+    this.close();   // drawer render toàn cục ở Shell, không tự đóng khi router điều hướng
   }
 
   openEffective(): void {

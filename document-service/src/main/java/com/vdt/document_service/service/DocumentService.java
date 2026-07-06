@@ -83,11 +83,11 @@ public class DocumentService {
     public List<DocumentResponse> list() {
         activateDueDocuments();   // tự chuyển APPROVED -> ACTIVE cho văn bản đã tới hạn, không chờ cron
         String role = SecurityUtil.currentRole();
+        // ADMIN/MANAGER_COMPANY/MANAGER_CENTER đều xem được TOÀN BỘ văn bản hệ thống (chỉ giới hạn ở
+        // sửa/duyệt/gia hạn theo phạm vi tổ chức, xem canManage()/assertCanApprove()); USER chỉ xem văn bản của mình.
         List<Document> docs = switch (role) {
-            case "ADMIN"           -> repo.findAll();
-            case "MANAGER_COMPANY" -> repo.findByCompanyId(SecurityUtil.currentCompanyId());
-            case "MANAGER_CENTER"  -> repo.findByDepartmentId(SecurityUtil.currentDepartmentId());
-            default                -> repo.findByOwnerId(SecurityUtil.currentUserId()); // USER
+            case "ADMIN", "MANAGER_COMPANY", "MANAGER_CENTER" -> repo.findAll();
+            default -> repo.findByOwnerId(SecurityUtil.currentUserId()); // USER
         };
         // cache tên theo ownerId để tra cứu/hiển thị người phụ trách, tránh gọi auth-service trùng
         Map<Long, String> nameCache = new HashMap<>();
@@ -129,7 +129,8 @@ public class DocumentService {
     @Transactional
     public DocumentResponse update(Long id, DocumentRequest req) {
         Document doc = findOrThrow(id);
-        assertOwner(doc);                              // chỉ chủ sở hữu sửa
+        if (!canManage(doc))   // chủ sở hữu / admin / manager trong phạm vi tổ chức
+            throw new ForbiddenException("Không đủ quyền sửa văn bản này");
         if (doc.getStatus() != DocumentStatus.DRAFT && doc.getStatus() != DocumentStatus.REJECTED)
             throw new ForbiddenException("Chỉ sửa được văn bản ở trạng thái DRAFT/REJECTED");
         assertEffectiveBeforeExpiry(req.effectiveDate(), req.expiryDate());
@@ -218,7 +219,7 @@ public class DocumentService {
         Document doc = findOrThrow(id);
         if (doc.getStatus() != DocumentStatus.APPROVED)
             throw new BusinessException("Chỉ đổi được ngày hiệu lực của văn bản APPROVED (đã duyệt, chờ hiệu lực)");
-        if (!canRenew(doc))
+        if (!canManage(doc))
             throw new ForbiddenException("Không đủ quyền đổi ngày hiệu lực văn bản này");
         if (!newDate.isBefore(doc.getExpiryDate()))
             throw new BusinessException("Ngày hiệu lực phải trước ngày hết hạn " + doc.getExpiryDate());
@@ -292,7 +293,7 @@ public class DocumentService {
             throw new BusinessException("Ngày gia hạn phải sau hôm nay");
         if (doc.getStatus() != DocumentStatus.WARNING && doc.getStatus() != DocumentStatus.EXPIRED && doc.getStatus() != DocumentStatus.ACTIVE)
             throw new BusinessException("Không gia hạn được văn bản ở trạng thái " + doc.getStatus());
-        if (!canRenew(doc))
+        if (!canManage(doc))
             throw new ForbiddenException("Không đủ quyền gia hạn văn bản này");
 
         LocalDate oldExpiry = doc.getExpiryDate();
@@ -318,7 +319,7 @@ public class DocumentService {
             throw new BusinessException("Văn bản không thể tự liên kết với chính nó");
         Document doc = findOrThrow(id);
         Document target = findOrThrow(targetId);
-        if (!canRenew(doc))   // cùng quyền như gia hạn: chủ sở hữu / admin / manager trong phạm vi
+        if (!canManage(doc))   // cùng quyền như gia hạn: chủ sở hữu / admin / manager trong phạm vi
             throw new ForbiddenException("Không đủ quyền tạo quan hệ cho văn bản này");
         assertCanView(target);
         if (relationRepo.existsByFromDocIdAndToDocIdAndRelationType(id, targetId, type))
@@ -563,14 +564,12 @@ public class DocumentService {
             throw new ForbiddenException("Bạn không phải chủ sở hữu văn bản này");
     }
 
-    /** ADMIN xem hết; MANAGER xem trong phạm vi; USER chỉ xem của mình. */
+    /** ADMIN/MANAGER_COMPANY/MANAGER_CENTER xem được mọi văn bản; USER chỉ xem của mình. */
     private void assertCanView(Document doc) {
         String role = SecurityUtil.currentRole();
         boolean ok = switch (role) {
-            case "ADMIN"           -> true;
-            case "MANAGER_COMPANY" -> SecurityUtil.currentCompanyId().equals(doc.getCompanyId());
-            case "MANAGER_CENTER"  -> SecurityUtil.currentDepartmentId().equals(doc.getDepartmentId());
-            default                -> SecurityUtil.currentUserId().equals(doc.getOwnerId());
+            case "ADMIN", "MANAGER_COMPANY", "MANAGER_CENTER" -> true;
+            default -> SecurityUtil.currentUserId().equals(doc.getOwnerId());
         };
         if (!ok) throw new ForbiddenException("Không có quyền xem văn bản này");
     }
@@ -673,7 +672,8 @@ public class DocumentService {
         }
     }
 
-    private boolean canRenew(Document doc){
+    /** Chủ sở hữu / ADMIN / manager trong phạm vi tổ chức — dùng chung cho sửa, gia hạn, đổi ngày hiệu lực, tạo quan hệ. */
+    private boolean canManage(Document doc){
         String role = SecurityUtil.currentRole();
         return doc.getOwnerId().equals(SecurityUtil.currentUserId())
             || "ADMIN".equals(role)

@@ -1,10 +1,10 @@
 <a class="back-link" routerLink="/documents">← Quay lại danh sách văn bản</a>
 
-<div class="form-grid">
+<div class="form-grid" [class.single]="editId != null">
 
   <!-- ===== THÔNG TIN ===== -->
   <form class="card info-card" (ngSubmit)="save()">
-    <div class="card-title">Thông tin văn bản</div>
+    <div class="card-title">{{ editId != null ? 'Sửa văn bản' : 'Thông tin văn bản' }}</div>
 
     <div>
       <div class="field-label">Tên văn bản</div>
@@ -44,12 +44,14 @@
       </div>
     </div>
 
-    <div class="submit-now-cell">
-      <label class="submit-now">
-        <input type="checkbox" name="submitNow" [(ngModel)]="submitNow">
-        Gửi duyệt ngay sau khi tạo
-      </label>
-    </div>
+    @if (editId == null) {
+      <div class="submit-now-cell">
+        <label class="submit-now">
+          <input type="checkbox" name="submitNow" [(ngModel)]="submitNow">
+          Gửi duyệt ngay sau khi tạo
+        </label>
+      </div>
+    }
 
     <div>
       <div class="field-label">Mô tả <span class="opt">(không bắt buộc)</span></div>
@@ -61,12 +63,13 @@
       <a class="btn-ghost" routerLink="/documents">Hủy</a>
       <button type="submit" class="btn-primary save-btn" [disabled]="!valid() || saving()">
         @if (saving()) { <span class="spinner"></span> }
-        Lưu văn bản
+        {{ editId != null ? 'Lưu thay đổi' : 'Lưu văn bản' }}
       </button>
     </div>
   </form>
 
-  <!-- ===== TỆP ĐÍNH KÈM + PREVIEW ===== -->
+  <!-- ===== TỆP ĐÍNH KÈM + PREVIEW (chỉ khi tạo mới — sửa tệp qua màn hình chi tiết) ===== -->
+  @if (editId == null) {
   <div class="card file-card">
     <div class="card-title">
       Tệp đính kèm
@@ -106,4 +109,5 @@
       </label>
     }
   </div>
+  }
 </div>

@@ -22,6 +22,10 @@ export const routes: Routes = [
         loadComponent: () => import('./features/doc-form/doc-form').then(m => m.DocFormPage)
       },
       {
+        path: 'documents/:id/edit',
+        loadComponent: () => import('./features/doc-form/doc-form').then(m => m.DocFormPage)
+      },
+      {
         path: 'documents',
         loadComponent: () => import('./features/documents/documents').then(m => m.DocumentsPage)
       },

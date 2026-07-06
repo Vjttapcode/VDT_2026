@@ -197,6 +197,31 @@ export class DocumentStore {
     return doc.id;
   }
 
+  /** Lấy 1 văn bản theo id (cho form sửa) — luôn gọi thẳng API, không phụ thuộc cache đã load hay chưa. */
+  async getOne(id: number): Promise<DocumentDto | null> {
+    try {
+      return await firstValueFrom(this.http.get<DocumentDto>(`${API}/${id}`));
+    } catch (err) {
+      this.toast('err', this.errText(err as HttpErrorResponse, 'Không tải được văn bản'));
+      return null;
+    }
+  }
+
+  /** Sửa văn bản DRAFT/REJECTED — trả về true nếu thành công. */
+  async update(
+    id: number,
+    req: { title: string; description: string; type: DocType; level: DocLevel; expiryDate: string; effectiveDate: string | null }
+  ): Promise<boolean> {
+    try {
+      await firstValueFrom(this.http.put<DocumentDto>(`${API}/${id}`, req));
+      this.afterMutation(id, 'Đã cập nhật văn bản');
+      return true;
+    } catch (err) {
+      this.toast('err', this.errText(err as HttpErrorResponse, 'Không cập nhật được văn bản'));
+      return false;
+    }
+  }
+
   submit(id: number): void { this.action(id, 'submit', 'Đã gửi duyệt'); }
   approve(id: number): void { this.action(id, 'approve', 'Đã phê duyệt văn bản'); }
 

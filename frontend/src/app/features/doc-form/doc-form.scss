@@ -8,6 +8,7 @@
 .form-grid {
   display: grid; grid-template-columns: 430px 1fr; gap: 20px; align-items: start;
   > * { min-width: 0; }
+  &.single { grid-template-columns: 1fr; max-width: 520px; }
 }
 
 .card-title {

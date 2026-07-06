@@ -215,7 +215,11 @@
           <button class="btn-ghost" (click)="openReject()">Từ chối</button>
         } @else if (canSubmit()) {
           <button class="btn-primary grow" (click)="store.submit(d.id)">Gửi duyệt</button>
+          <button class="btn-ghost" (click)="goEdit()">Sửa</button>
           <button class="btn-ghost" (click)="confirmingDelete.set(true)">Xóa</button>
+        } @else if (canEdit()) {
+          <button class="btn-primary grow" (click)="goEdit()">Sửa</button>
+          <button class="btn-ghost" (click)="close()">Đóng</button>
         } @else if (canSetEffective()) {
           <button class="btn-primary grow" (click)="activateNow()">⚡ Kích hoạt hiệu lực ngay</button>
           <button class="btn-ghost" (click)="openEffective()">Đổi ngày hiệu lực…</button>
