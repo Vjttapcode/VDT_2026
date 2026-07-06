@@ -13,6 +13,7 @@ public record AdminOverrideRequest(
         DocumentType type,
         DocumentLevel level,
         LocalDate expiryDate,
+        LocalDate effectiveDate,
         Long ownerId,
         DocumentStatus status) {
 }

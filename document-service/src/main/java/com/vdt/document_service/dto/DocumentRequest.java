@@ -12,7 +12,8 @@ public record DocumentRequest(
     String description,
     @NotNull DocumentType type,
     @NotNull DocumentLevel level,
-    @NotNull @Future LocalDate expiryDate
+    @NotNull @Future LocalDate expiryDate,
+    LocalDate effectiveDate   // null = hiệu lực ngay khi được duyệt
 ) {
-    
+
 }

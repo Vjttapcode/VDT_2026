@@ -7,6 +7,7 @@ public record DashboardStatsDto(
         long warning,
         long expired,
         long pending,
+        long approved,   // đã duyệt, chờ đến ngày hiệu lực
         List<ExpiringItem> expiringIn30Days
 ) {
     public record ExpiringItem(Long docId, String title, String level, long daysLeft) {}

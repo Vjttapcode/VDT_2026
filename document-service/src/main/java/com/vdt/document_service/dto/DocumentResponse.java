@@ -8,7 +8,8 @@ public record DocumentResponse(
         Long id, String title, String description,
         String type, String level, String status,
         Long ownerId, String ownerName, Long departmentId, Long companyId,
-        LocalDate expiryDate, String filePath, Integer renewalCount, Long supersedesId,
+        LocalDate expiryDate, LocalDate issuedDate, LocalDate effectiveDate,
+        String filePath, Integer renewalCount, Long supersedesId,
         LocalDateTime createdAt, LocalDateTime updatedAt) {
 
     public static DocumentResponse from(Document d) {
@@ -20,7 +21,8 @@ public record DocumentResponse(
                 d.getId(), d.getTitle(), d.getDescription(),
                 d.getType().name(), d.getLevel().name(), d.getStatus().name(),
                 d.getOwnerId(), ownerName, d.getDepartmentId(), d.getCompanyId(),
-                d.getExpiryDate(), d.getFilePath(), d.getRenewalCount(), d.getSupersedesId(),
+                d.getExpiryDate(), d.getIssuedDate(), d.getEffectiveDate(),
+                d.getFilePath(), d.getRenewalCount(), d.getSupersedesId(),
                 d.getCreatedAt(), d.getUpdatedAt());
     }
 }

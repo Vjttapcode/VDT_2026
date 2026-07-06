@@ -1,7 +1,7 @@
 export type Role = 'USER' | 'MANAGER_CENTER' | 'MANAGER_COMPANY' | 'ADMIN';
 export type DocType = 'CONTRACT' | 'LICENSE' | 'CERTIFICATE' | 'SR';
 export type DocLevel = 'CENTER' | 'COMPANY' | 'GROUP';
-export type DocStatus = 'DRAFT' | 'PENDING' | 'ACTIVE' | 'WARNING' | 'EXPIRED' | 'REJECTED';
+export type DocStatus = 'DRAFT' | 'PENDING' | 'APPROVED' | 'ACTIVE' | 'WARNING' | 'EXPIRED' | 'REJECTED';
 
 export interface LoginResponse {
   token: string;
@@ -25,6 +25,8 @@ export interface DocumentDto {
   departmentId: number | null;
   companyId: number | null;
   expiryDate: string;
+  issuedDate: string | null;      // ngày ban hành = ngày được duyệt
+  effectiveDate: string | null;   // ngày có hiệu lực; null = hiệu lực ngay khi duyệt
   filePath: string | null;
   renewalCount: number;
   supersedesId: number | null;
@@ -64,7 +66,8 @@ export const REL_DIRECTION_VN: Record<RelationType, Record<RelationDirection, st
   AMEND: { OUTGOING: 'Sửa đổi/bổ sung cho', INCOMING: 'Được sửa đổi/bổ sung bởi' }
 };
 
-export type AuditAction = 'CREATE' | 'UPDATE' | 'SUBMIT' | 'APPROVE' | 'REJECT' | 'RENEW' | 'REPLACE' | 'REPEAL' | 'AMEND';
+export type AuditAction = 'CREATE' | 'UPDATE' | 'SUBMIT' | 'APPROVE' | 'REJECT' | 'RENEW' | 'REPLACE' | 'REPEAL' | 'AMEND'
+  | 'ADMIN_OVERRIDE' | 'EFFECTIVE' | 'SET_EFFECTIVE';
 
 /** Một dòng lịch sử thay đổi (audit log) của văn bản. */
 export interface AuditLog {
@@ -86,7 +89,10 @@ export const AUDIT_ACTION_VN: Record<AuditAction, string> = {
   RENEW: 'Gia hạn',
   REPLACE: 'Thay thế',
   REPEAL: 'Bãi bỏ',
-  AMEND: 'Sửa đổi/bổ sung'
+  AMEND: 'Sửa đổi/bổ sung',
+  ADMIN_OVERRIDE: 'Can thiệp (Admin)',
+  EFFECTIVE: 'Có hiệu lực',
+  SET_EFFECTIVE: 'Đổi ngày hiệu lực'
 };
 
 /** Màu chấm mốc thời gian theo loại hành động. */
@@ -99,7 +105,10 @@ export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
   RENEW: '#1E8E5A',
   REPLACE: '#7A5AF0',
   REPEAL: '#C62B26',
-  AMEND: '#3B6BB5'
+  AMEND: '#3B6BB5',
+  ADMIN_OVERRIDE: '#9A6400',
+  EFFECTIVE: '#1E8E5A',
+  SET_EFFECTIVE: '#0E7490'
 };
 
 /** Nhãn tiếng Việt cho các trường trong diff changes. */
@@ -108,7 +117,11 @@ export const FIELD_VN: Record<string, string> = {
   description: 'Mô tả',
   type: 'Loại văn bản',
   level: 'Cấp áp dụng',
+  status: 'Trạng thái',
+  ownerId: 'Người phụ trách',
   expiryDate: 'Ngày hết hạn',
+  issuedDate: 'Ngày ban hành',
+  effectiveDate: 'Ngày hiệu lực',
   supersedesId: 'Văn bản thay thế'
 };
 
@@ -117,6 +130,7 @@ export interface DashboardStats {
   warning: number;
   expired: number;
   pending: number;
+  approved: number;   // đã duyệt, chờ đến ngày hiệu lực
   expiringIn30Days: { docId: number; title: string; level: DocLevel; daysLeft: number }[];
 }
 
@@ -161,6 +175,7 @@ export const STATUS_THEME: Record<DocStatus, StatusTheme> = {
   WARNING:  { vn: 'Sắp hết hạn',  bg: 'rgba(224,162,46,.14)',  color: '#9A6400', stripe: '#E0A22E' },
   EXPIRED:  { vn: 'Đã hết hạn',   bg: 'rgba(226,47,41,.10)',   color: '#C62B26', stripe: '#E22F29' },
   PENDING:  { vn: 'Chờ duyệt',    bg: 'rgba(75,123,229,.14)',  color: '#3B6BB5', stripe: '#3B6BB5' },
+  APPROVED: { vn: 'Chờ hiệu lực', bg: 'rgba(14,116,144,.12)',  color: '#0E7490', stripe: '#0E7490' },
   DRAFT:    { vn: 'Nháp',         bg: '#F0EDF0',               color: '#5A6072', stripe: '#9A95A2' },
   REJECTED: { vn: 'Bị từ chối',   bg: 'rgba(122,116,128,.16)', color: '#6E6876', stripe: '#7A7480' }
 };
@@ -192,7 +207,11 @@ export interface DocView extends DocumentDto {
   iconFg: string;
   expiryVn: string;
   updatedVn: string;
+  createdVn: string;
+  /** ngày ban hành (issuedDate) — '—' nếu chưa duyệt */
   issuedVn: string;
+  /** ngày có hiệu lực — '—' nếu chưa nhập (hiệu lực ngay khi duyệt) */
+  effectiveVn: string;
 }
 
 /* ===== date helpers ===== */

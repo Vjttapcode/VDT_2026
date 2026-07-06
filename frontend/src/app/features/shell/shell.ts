@@ -67,7 +67,7 @@ export class Shell implements OnInit {
 
   readonly filterLabel = computed(() => {
     const labels: Record<StatusFilter, string> = {
-      all: 'từ khóa', WARNING: 'sắp hết hạn', EXPIRED: 'đã hết hạn', ACTIVE: 'còn hiệu lực', PENDING: 'chờ xử lý'
+      all: 'từ khóa', WARNING: 'sắp hết hạn', EXPIRED: 'đã hết hạn', ACTIVE: 'còn hiệu lực', PENDING: 'chờ xử lý', APPROVED: 'chờ hiệu lực'
     };
     return labels[this.store.statusFilter()];
   });

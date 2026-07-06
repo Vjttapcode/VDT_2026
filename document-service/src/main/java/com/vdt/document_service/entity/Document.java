@@ -62,6 +62,14 @@ public class Document {
     @Column(name = "expiry_date", nullable = false)
     private LocalDate expiryDate;
 
+    /** Ngày ban hành — hệ thống tự set = ngày được cấp trên phê duyệt. */
+    @Column(name = "issued_date")
+    private LocalDate issuedDate;
+
+    /** Ngày có hiệu lực — người tạo nhập; null = hiệu lực ngay khi được duyệt. */
+    @Column(name = "effective_date")
+    private LocalDate effectiveDate;
+
     @Column(name = "file_path", length = 500)
     private String filePath;
 

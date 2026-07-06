@@ -26,10 +26,11 @@ export class DashboardPage {
   readonly statusSegments = computed(() => {
     const c = this.store.counts();
     const order = [
-      { key: 'ACTIVE',  label: 'Còn hiệu lực', value: c.active,  color: '#1E8E5A' },
-      { key: 'WARNING', label: 'Sắp hết hạn',  value: c.warning, color: '#E0A22E' },
-      { key: 'EXPIRED', label: 'Đã hết hạn',   value: c.expired, color: '#E22F29' },
-      { key: 'PENDING', label: 'Chờ xử lý',    value: c.pending, color: '#3B6BB5' }
+      { key: 'ACTIVE',   label: 'Còn hiệu lực', value: c.active,   color: '#1E8E5A' },
+      { key: 'WARNING',  label: 'Sắp hết hạn',  value: c.warning,  color: '#E0A22E' },
+      { key: 'EXPIRED',  label: 'Đã hết hạn',   value: c.expired,  color: '#E22F29' },
+      { key: 'APPROVED', label: 'Chờ hiệu lực', value: c.approved, color: '#0E7490' },
+      { key: 'PENDING',  label: 'Chờ xử lý',    value: c.pending,  color: '#3B6BB5' }
     ];
     const total = order.reduce((s, o) => s + o.value, 0) || 1;
     let acc = 0;
@@ -63,6 +64,7 @@ export class DashboardPage {
     { key: 'WARNING', label: 'Sắp hết hạn' },
     { key: 'EXPIRED', label: 'Đã hết hạn' },
     { key: 'ACTIVE', label: 'Còn hiệu lực' },
+    { key: 'APPROVED', label: 'Chờ hiệu lực' },
     { key: 'PENDING', label: 'Chờ xử lý' }
   ];
 

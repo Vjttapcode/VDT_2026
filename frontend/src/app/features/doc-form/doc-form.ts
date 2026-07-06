@@ -23,6 +23,7 @@ export class DocFormPage {
   type: DocType = 'CONTRACT';
   level: DocLevel = 'CENTER';
   expiryDate = fmtIso(new Date(Date.now() + 90 * 86400000));
+  effectiveDate = '';   // để trống = hiệu lực ngay khi được duyệt
   submitNow = true;
 
   readonly minDate = fmtIso(new Date(Date.now() + 86400000)); // backend validate @Future
@@ -68,7 +69,8 @@ export class DocFormPage {
   }
 
   valid(): boolean {
-    return !!this.title.trim() && !!this.expiryDate && this.expiryDate >= this.minDate;
+    return !!this.title.trim() && !!this.expiryDate && this.expiryDate >= this.minDate
+      && (!this.effectiveDate || this.effectiveDate < this.expiryDate);
   }
 
   async save(): Promise<void> {
@@ -80,7 +82,8 @@ export class DocFormPage {
         description: this.description.trim(),
         type: this.type,
         level: this.level,
-        expiryDate: this.expiryDate
+        expiryDate: this.expiryDate,
+        effectiveDate: this.effectiveDate || null
       },
       this.file(),
       this.submitNow

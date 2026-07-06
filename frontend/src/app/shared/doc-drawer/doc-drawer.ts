@@ -30,10 +30,13 @@ export class DocDrawer {
   relateTargetId: number | null = null;
   relateType: RelationType = 'REPLACE';
 
+  readonly effectiveOpen = signal(false);
+  effectiveDate = '';
+
   readonly overrideOpen = signal(false);
   overrideStatus: DocStatus = 'ACTIVE';
   overrideExpiry = '';
-  readonly statusOptions: DocStatus[] = ['DRAFT', 'PENDING', 'ACTIVE', 'WARNING', 'EXPIRED', 'REJECTED'];
+  readonly statusOptions: DocStatus[] = ['DRAFT', 'PENDING', 'APPROVED', 'ACTIVE', 'WARNING', 'EXPIRED', 'REJECTED'];
   readonly isAdmin = computed(() => this.auth.user()?.role === 'ADMIN');
 
   readonly minDate = fmtIso(new Date(Date.now() + 86400000)); // backend validate @Future
@@ -77,6 +80,9 @@ export class DocDrawer {
     const s = this.doc()?.dispStatus;
     return s === 'ACTIVE' || s === 'WARNING' || s === 'EXPIRED';
   });
+  /** văn bản đã duyệt chờ hiệu lực: chủ sở hữu/quản lý được kích hoạt ngay hoặc dời ngày */
+  readonly canSetEffective = computed(() =>
+    this.doc()?.dispStatus === 'APPROVED' && (this.isOwner() || this.auth.isManager()));
 
   /** chủ sở hữu hoặc quản lý mới được tạo quan hệ (thay thế/bãi bỏ/sửa đổi) */
   readonly canRelate = computed(() => this.isOwner() || this.auth.isManager());
@@ -100,6 +106,30 @@ export class DocDrawer {
     this.relateTargetId = null;
     this.relateType = 'REPLACE';
     this.overrideOpen.set(false);
+    this.effectiveOpen.set(false);
+  }
+
+  openEffective(): void {
+    const d = this.doc();
+    if (!d) return;
+    this.effectiveDate = d.effectiveDate ?? fmtIso(new Date());
+    this.effectiveOpen.set(true);
+  }
+
+  /** đổi ngày hiệu lực; đặt <= hôm nay = kích hoạt ngay */
+  confirmEffective(): void {
+    const d = this.doc();
+    if (!d || !this.effectiveDate || this.effectiveDate >= d.expiryDate) return;
+    this.store.setEffective(d.id, this.effectiveDate);
+    this.effectiveOpen.set(false);
+  }
+
+  /** kích hoạt hiệu lực ngay hôm nay */
+  activateNow(): void {
+    const d = this.doc();
+    if (!d) return;
+    this.store.setEffective(d.id, fmtIso(new Date()));
+    this.effectiveOpen.set(false);
   }
 
   openRelate(): void {

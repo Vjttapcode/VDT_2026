@@ -38,6 +38,7 @@ public class EmailService {
             case "APPROVAL_REQUEST" -> "[Cần duyệt] " + docTitle;
             case "APPROVED"         -> "[Đã duyệt] " + docTitle;
             case "REJECTED"         -> "[Bị từ chối] " + docTitle;
+            case "EFFECTIVE"        -> "[Có hiệu lực] " + docTitle;
             default                 -> "[Thông báo] " + docTitle;
         };
         String body = "<div style='font-family:Arial'><p>Văn bản <b>#" + docId + " - " + docTitle + "</b></p>"

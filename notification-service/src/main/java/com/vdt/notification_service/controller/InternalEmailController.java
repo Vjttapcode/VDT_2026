@@ -37,7 +37,7 @@ public class InternalEmailController {
         // resolve người nhận từ payload (cần document-service bổ sung ownerId/departmentId — xem ghi chú)
         String to = switch (eventType) {
             case "APPROVAL_REQUEST" -> authClient.centerManagerEmail(p.path("departmentId").asLong());
-            case "APPROVED", "REJECTED" -> p.path("ownerEmail").asText(null);
+            case "APPROVED", "REJECTED", "EFFECTIVE" -> p.path("ownerEmail").asText(null);
             default -> null;
         };
         if (to != null) service.sendApproval(to, eventType, docId, title, reason);

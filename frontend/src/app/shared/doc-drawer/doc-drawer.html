@@ -23,7 +23,9 @@
             <div><div class="k">Người phụ trách</div><div class="v">{{ d.ownerVn }}</div></div>
             <div><div class="k">Cấp áp dụng</div><div class="v">{{ d.levelVn }}</div></div>
             <div><div class="k">Số lần gia hạn</div><div class="v mono">{{ d.renewalCount }}</div></div>
-            <div><div class="k">Ngày tạo</div><div class="v mono">{{ d.issuedVn }}</div></div>
+            <div><div class="k">Ngày tạo</div><div class="v mono">{{ d.createdVn }}</div></div>
+            <div><div class="k">Ngày ban hành</div><div class="v mono">{{ d.issuedVn }}</div></div>
+            <div><div class="k">Ngày hiệu lực</div><div class="v mono">{{ d.effectiveVn }}</div></div>
             <div><div class="k">Ngày hết hạn</div><div class="v mono" [style.color]="d.badgeColor">{{ d.expiryVn }}</div></div>
           </div>
 
@@ -93,6 +95,19 @@
             Nhắc nhở tự động sẽ gửi email cảnh báo tới <b>{{ d.deptName }}</b> theo các mốc
             <span class="mono">T-30 / 15 / 7 / 1</span> ngày trước khi văn bản đến hạn.
           </div>
+
+          @if (effectiveOpen()) {
+            <div class="action-box">
+              <div class="field-label">Ngày có hiệu lực mới (đặt hôm nay = kích hoạt ngay)</div>
+              <input class="field-input" type="date" name="effectiveDate"
+                     [(ngModel)]="effectiveDate" [max]="d.expiryDate">
+              <div class="box-actions">
+                <button class="btn-ghost" (click)="effectiveOpen.set(false)">Hủy</button>
+                <button class="btn-primary" [disabled]="!effectiveDate || effectiveDate >= d.expiryDate"
+                        (click)="confirmEffective()">Xác nhận</button>
+              </div>
+            </div>
+          }
 
           @if (renewOpen()) {
             <div class="action-box">
@@ -168,7 +183,7 @@
                     <div class="tl-body">
                       <div class="tl-top">
                         <span class="tl-action" [style.color]="actionDot(h.action)">{{ actionLabel(h.action) }}</span>
-                        <span class="tl-actor">{{ h.actorName || ('Người dùng #' + h.actorId) }}</span>
+                        <span class="tl-actor">{{ h.actorName || (h.actorId != null ? 'Người dùng #' + h.actorId : 'Hệ thống') }}</span>
                         <span class="tl-time mono">{{ fmtDateTime(h.createdAt) }}</span>
                       </div>
                       @if (h.comment) { <div class="tl-comment">{{ h.comment }}</div> }
@@ -227,6 +242,9 @@
         } @else if (canSubmit()) {
           <button class="btn-primary grow" (click)="store.submit(d.id)">Gửi duyệt</button>
           <button class="btn-ghost" (click)="confirmingDelete.set(true)">Xóa</button>
+        } @else if (canSetEffective()) {
+          <button class="btn-primary grow" (click)="activateNow()">⚡ Kích hoạt hiệu lực ngay</button>
+          <button class="btn-ghost" (click)="openEffective()">Đổi ngày hiệu lực…</button>
         } @else if (canRenew()) {
           <button class="btn-primary grow" (click)="openRenew()">Gia hạn…</button>
           <button class="btn-ghost" (click)="close()">Đóng</button>

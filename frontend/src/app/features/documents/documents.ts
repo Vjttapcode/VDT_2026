@@ -59,6 +59,7 @@ export class DocumentsPage {
     { key: 'WARNING', label: 'Sắp hết hạn' },
     { key: 'EXPIRED', label: 'Đã hết hạn' },
     { key: 'ACTIVE', label: 'Còn hiệu lực' },
+    { key: 'APPROVED', label: 'Chờ hiệu lực' },
     { key: 'PENDING', label: 'Chờ xử lý' }
   ];
 

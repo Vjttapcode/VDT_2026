@@ -9,7 +9,7 @@ import {
 
 const API = '/api/documents';
 
-export type StatusFilter = 'all' | 'ACTIVE' | 'WARNING' | 'EXPIRED' | 'PENDING';
+export type StatusFilter = 'all' | 'ACTIVE' | 'WARNING' | 'EXPIRED' | 'PENDING' | 'APPROVED';
 export type SortKey = 'urgency' | 'name' | 'type';
 export type TypeFilter = DocType | 'all';
 export type DeptFilter = number | 'all';
@@ -127,6 +127,7 @@ export class DocumentStore {
       active: by('ACTIVE'),
       warning: by('WARNING'),
       expired: by('EXPIRED'),
+      approved: by('APPROVED'),
       pending: by('PENDING') + by('DRAFT') + by('REJECTED')
     };
   });
@@ -168,7 +169,7 @@ export class DocumentStore {
 
   /** Tạo văn bản, kèm upload tệp và gửi duyệt tùy chọn — dùng cho trang /documents/new. */
   async createFull(
-    req: { title: string; description: string; type: DocType; level: DocLevel; expiryDate: string },
+    req: { title: string; description: string; type: DocType; level: DocLevel; expiryDate: string; effectiveDate: string | null },
     file: File | null,
     submitNow: boolean
   ): Promise<number | null> {
@@ -245,6 +246,14 @@ export class DocumentStore {
     });
   }
 
+  /** Đổi ngày hiệu lực của văn bản APPROVED; đặt <= hôm nay = kích hoạt ngay. */
+  setEffective(id: number, isoDate: string): void {
+    this.http.patch<DocumentDto>(`${API}/${id}/effective-date`, { effectiveDate: isoDate }).subscribe({
+      next: () => { this.afterMutation(id, `Đã cập nhật ngày hiệu lực: ${fmtDate(toDate(isoDate))}`); this.loadHistory(id); },
+      error: err => this.toast('err', this.errText(err, 'Không cập nhật được ngày hiệu lực'))
+    });
+  }
+
   /** Gia hạn tới ngày cụ thể do người dùng chọn từ calendar. */
   renewTo(id: number, isoDate: string): void {
     this.http.post<DocumentDto>(`${API}/${id}/renew`, { newExpiryDate: isoDate }).subscribe({
@@ -311,14 +320,14 @@ export class DocumentStore {
   /** Xuất danh sách văn bản đang lọc ra CSV (UTF-8 BOM để Excel đọc đúng tiếng Việt). */
   exportCsv(): void {
     const rows = this.filtered();
-    const headers = ['Mã', 'Tiêu đề', 'Loại', 'Cấp', 'Đơn vị', 'Người phụ trách', 'Ngày hết hạn', 'Trạng thái', 'Số lần gia hạn'];
+    const headers = ['Mã', 'Tiêu đề', 'Loại', 'Cấp', 'Đơn vị', 'Người phụ trách', 'Ngày ban hành', 'Ngày hiệu lực', 'Ngày hết hạn', 'Trạng thái', 'Số lần gia hạn'];
     const esc = (v: unknown) => {
       const s = String(v ?? '');
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const lines = [headers.join(',')];
     for (const d of rows) {
-      lines.push([d.code, d.title, d.typeVn, d.levelVn, d.deptName, d.ownerVn, d.expiryVn, d.statusVn, d.renewalCount]
+      lines.push([d.code, d.title, d.typeVn, d.levelVn, d.deptName, d.ownerVn, d.issuedVn, d.effectiveVn, d.expiryVn, d.statusVn, d.renewalCount]
         .map(esc).join(','));
     }
     const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });
@@ -375,9 +384,11 @@ export class DocumentStore {
 
   private present(d: DocumentDto): DocView {
     const daysLeft = daysFromToday(d.expiryDate);
-    // ACTIVE/WARNING suy lại theo daysLeft để UI realtime, không chờ cron backend
+    // ACTIVE/WARNING suy lại theo daysLeft để UI realtime, không chờ cron backend;
+    // APPROVED đã tới ngày hiệu lực cũng hiển thị như đang hiệu lực, không chờ job 0h05
     let dispStatus: DocStatus = d.status;
-    if (d.status === 'ACTIVE' || d.status === 'WARNING') {
+    if (d.status === 'ACTIVE' || d.status === 'WARNING'
+        || (d.status === 'APPROVED' && d.effectiveDate != null && daysFromToday(d.effectiveDate) <= 0)) {
       dispStatus = daysLeft < 0 ? 'EXPIRED' : daysLeft <= ALERT_WINDOW ? 'WARNING' : 'ACTIVE';
     }
     const st = STATUS_THEME[dispStatus];
@@ -398,12 +409,16 @@ export class DocumentStore {
       stripe: st.stripe,
       daysVn: dispStatus === 'PENDING' || dispStatus === 'DRAFT' || dispStatus === 'REJECTED'
         ? st.vn
-        : daysText(daysLeft),
+        : dispStatus === 'APPROVED' && d.effectiveDate
+          ? `Hiệu lực từ ${fmtDate(toDate(d.effectiveDate))}`
+          : daysText(daysLeft),
       iconBg,
       iconFg,
       expiryVn: fmtDate(toDate(d.expiryDate)),
       updatedVn: fmtDate(toDate(d.updatedAt)),
-      issuedVn: fmtDate(created)
+      createdVn: fmtDate(created),
+      issuedVn: d.issuedDate ? fmtDate(toDate(d.issuedDate)) : '—',
+      effectiveVn: d.effectiveDate ? fmtDate(toDate(d.effectiveDate)) : '—'
     };
   }
 }

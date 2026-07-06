@@ -28,6 +28,7 @@ import com.vdt.document_service.dto.BulkResult;
 import com.vdt.document_service.dto.DashboardStatsDto;
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
+import com.vdt.document_service.dto.EffectiveDateRequest;
 import com.vdt.document_service.dto.RejectRequest;
 import com.vdt.document_service.dto.RelateRequest;
 import com.vdt.document_service.dto.RelationDto;
@@ -77,6 +78,12 @@ public class DocumentController {
     @PostMapping("/{id}/renew")
     public DocumentResponse renew(@PathVariable Long id, @Valid @RequestBody RenewRequest body) {
         return service.renew(id, body.newExpiryDate());
+    }
+
+    /** Đổi ngày hiệu lực (văn bản APPROVED); đặt <= hôm nay = kích hoạt ngay. */
+    @PatchMapping("/{id}/effective-date")
+    public DocumentResponse setEffectiveDate(@PathVariable Long id, @Valid @RequestBody EffectiveDateRequest body) {
+        return service.setEffectiveDate(id, body.effectiveDate());
     }
 
     @PostMapping("/{id}/replace")

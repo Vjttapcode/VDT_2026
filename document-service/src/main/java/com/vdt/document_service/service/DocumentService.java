@@ -79,7 +79,9 @@ public class DocumentService {
     }
 
     /** List filter theo role của người gọi. */
+    @Transactional
     public List<DocumentResponse> list() {
+        activateDueDocuments();   // tự chuyển APPROVED -> ACTIVE cho văn bản đã tới hạn, không chờ cron
         String role = SecurityUtil.currentRole();
         List<Document> docs = switch (role) {
             case "ADMIN"           -> repo.findAll();
@@ -95,6 +97,7 @@ public class DocumentService {
                 .toList();
     }
 
+    @Transactional
     public DocumentResponse get(Long id) {
         Document doc = findOrThrow(id);
         assertCanView(doc);
@@ -103,6 +106,7 @@ public class DocumentService {
 
     @Transactional
     public DocumentResponse create(DocumentRequest req) {
+        assertEffectiveBeforeExpiry(req.effectiveDate(), req.expiryDate());
         Long userId = SecurityUtil.currentUserId();
         Document doc = Document.builder()
                 .title(req.title())
@@ -114,6 +118,7 @@ public class DocumentService {
                 .departmentId(nullIfSentinel(SecurityUtil.currentDepartmentId()))
                 .companyId(nullIfSentinel(SecurityUtil.currentCompanyId()))
                 .expiryDate(req.expiryDate())
+                .effectiveDate(req.effectiveDate())
                 .renewalCount(0)
                 .build();
         Document saved = repo.save(doc);
@@ -127,6 +132,7 @@ public class DocumentService {
         assertOwner(doc);                              // chỉ chủ sở hữu sửa
         if (doc.getStatus() != DocumentStatus.DRAFT && doc.getStatus() != DocumentStatus.REJECTED)
             throw new ForbiddenException("Chỉ sửa được văn bản ở trạng thái DRAFT/REJECTED");
+        assertEffectiveBeforeExpiry(req.effectiveDate(), req.expiryDate());
 
         // gom diff giá trị trước/sau trước khi ghi đè
         Map<String, Object> changes = new LinkedHashMap<>();
@@ -140,12 +146,15 @@ public class DocumentService {
             changes.put("level", pair(doc.getLevel().name(), req.level().name()));
         if (!Objects.equals(doc.getExpiryDate(), req.expiryDate()))
             changes.put("expiryDate", pair(str(doc.getExpiryDate()), str(req.expiryDate())));
+        if (!Objects.equals(doc.getEffectiveDate(), req.effectiveDate()))
+            changes.put("effectiveDate", pair(str(doc.getEffectiveDate()), str(req.effectiveDate())));
 
         doc.setTitle(req.title());
         doc.setDescription(req.description());
         doc.setType(req.type());
         doc.setLevel(req.level());
         doc.setExpiryDate(req.expiryDate());
+        doc.setEffectiveDate(req.effectiveDate());
         Document saved = repo.save(doc);
         if (!changes.isEmpty())   // chỉ ghi log khi thực sự có thay đổi
             saveLog(saved.getId(), "UPDATE", SecurityUtil.currentUserId(), null, "Sửa văn bản", toJson(changes));
@@ -177,15 +186,92 @@ public class DocumentService {
         return DocumentResponse.from(doc);
     }
 
+    /**
+     * Duyệt văn bản: issuedDate = ngày duyệt (ngày ban hành).
+     * effectiveDate null hoặc <= hôm nay -> ACTIVE ngay; tương lai -> APPROVED chờ job kích hoạt.
+     */
     @Transactional
     public DocumentResponse approve(Long id){
         Document doc = findOrThrow(id);
         assertCanApprove(doc);
-        doc.setStatus(DocumentStatus.ACTIVE);
+        LocalDate today = LocalDate.now();
+        boolean effectiveNow = doc.getEffectiveDate() == null || !doc.getEffectiveDate().isAfter(today);
+        DocumentStatus newStatus = effectiveNow ? DocumentStatus.ACTIVE : DocumentStatus.APPROVED;
+        doc.setIssuedDate(today);
+        doc.setStatus(newStatus);
         repo.save(doc);
-        saveLog(doc.getId(), "APPROVE", null, SecurityUtil.currentUserId(), null);
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("status", pair(DocumentStatus.PENDING.name(), newStatus.name()));
+        changes.put("issuedDate", pair(null, str(today)));
+        saveLog(doc.getId(), "APPROVE", null, SecurityUtil.currentUserId(),
+                effectiveNow ? null : "Chờ hiệu lực từ " + doc.getEffectiveDate(), toJson(changes));
         enqueue(doc, "APPROVED", "USER", null);
         return DocumentResponse.from(doc);
+    }
+
+    /**
+     * Đổi ngày hiệu lực thủ công cho văn bản APPROVED (quyền như gia hạn).
+     * Đặt <= hôm nay = kích hoạt ngay, không cần chờ job.
+     */
+    @Transactional
+    public DocumentResponse setEffectiveDate(Long id, LocalDate newDate) {
+        Document doc = findOrThrow(id);
+        if (doc.getStatus() != DocumentStatus.APPROVED)
+            throw new BusinessException("Chỉ đổi được ngày hiệu lực của văn bản APPROVED (đã duyệt, chờ hiệu lực)");
+        if (!canRenew(doc))
+            throw new ForbiddenException("Không đủ quyền đổi ngày hiệu lực văn bản này");
+        if (!newDate.isBefore(doc.getExpiryDate()))
+            throw new BusinessException("Ngày hiệu lực phải trước ngày hết hạn " + doc.getExpiryDate());
+
+        LocalDate oldDate = doc.getEffectiveDate();
+        doc.setEffectiveDate(newDate);
+        Map<String, Object> changes = new LinkedHashMap<>();
+        changes.put("effectiveDate", pair(str(oldDate), str(newDate)));
+
+        boolean activateNow = !newDate.isAfter(LocalDate.now());
+        if (activateNow) {
+            doc.setStatus(DocumentStatus.ACTIVE);
+            changes.put("status", pair(DocumentStatus.APPROVED.name(), DocumentStatus.ACTIVE.name()));
+        }
+        repo.save(doc);
+        saveLog(doc.getId(), "SET_EFFECTIVE", SecurityUtil.currentUserId(), null,
+                activateNow ? "Kích hoạt hiệu lực từ " + newDate : "Dời ngày hiệu lực sang " + newDate,
+                toJson(changes));
+        if (activateNow) enqueue(doc, "EFFECTIVE", "USER", null);
+        return DocumentResponse.from(doc, authClient.getName(doc.getOwnerId()));
+    }
+
+    /**
+     * Quét toàn bộ APPROVED có effective_date <= hôm nay -> ACTIVE (cron gọi định kỳ, hoặc
+     * list()/dashboardStats()/findExpiring() gọi để tự làm mới trước khi đọc). Trả về số văn bản đã kích hoạt.
+     */
+    @Transactional
+    public int activateDueDocuments() {
+        List<Document> due = repo.findByStatusAndEffectiveDateLessThanEqual(
+                DocumentStatus.APPROVED, LocalDate.now());
+        int activated = 0;
+        for (Document doc : due) {
+            if (activateIfDue(doc)) activated++;
+        }
+        return activated;
+    }
+
+    /**
+     * Tự chuyển APPROVED -> ACTIVE nếu văn bản đã tới hạn hiệu lực nhưng cron/luồng khác chưa kịp xử lý.
+     * Trả về true nếu chính lần gọi này đã kích hoạt (để gọi nơi khác biết có ghi audit/gửi mail hay không).
+     */
+    private boolean activateIfDue(Document doc) {
+        if (doc.getStatus() != DocumentStatus.APPROVED || doc.getEffectiveDate() == null
+                || doc.getEffectiveDate().isAfter(LocalDate.now())) {
+            return false;
+        }
+        if (repo.activateIfDueAtomic(doc.getId(), LocalDate.now()) == 0) return false; // thua race, bên khác đã xử lý
+        doc.setStatus(DocumentStatus.ACTIVE);   // đồng bộ lại object trong bộ nhớ để response/caller phía sau đọc đúng
+        saveLog(doc.getId(), "EFFECTIVE", null, null,
+                "Tự động có hiệu lực từ " + doc.getEffectiveDate(),
+                toJson(oneChange("status", DocumentStatus.APPROVED.name(), DocumentStatus.ACTIVE.name())));
+        enqueue(doc, "EFFECTIVE", "USER", null);
+        return true;
     }
 
     @Transactional
@@ -251,10 +337,11 @@ public class DocumentService {
         }
         saveLog(id, type.name(), actor, null, fromLabel(type) + " văn bản #" + targetId, fromChanges);
 
-        // REPLACE/REPEAL: văn bản cũ mất hiệu lực + ghi diff trạng thái vào audit phía to
+        // REPLACE/REPEAL: văn bản cũ mất hiệu lực (kể cả APPROVED chưa kịp hiệu lực) + ghi diff trạng thái
         String toChanges = null;
         if (type != RelationType.AMEND
-                && (target.getStatus() == DocumentStatus.ACTIVE || target.getStatus() == DocumentStatus.WARNING)) {
+                && (target.getStatus() == DocumentStatus.ACTIVE || target.getStatus() == DocumentStatus.WARNING
+                    || target.getStatus() == DocumentStatus.APPROVED)) {
             DocumentStatus oldStatus = target.getStatus();
             target.setStatus(DocumentStatus.EXPIRED);
             repo.save(target);
@@ -272,7 +359,7 @@ public class DocumentService {
     }
 
     /** Lịch sử thay đổi (audit log) của một văn bản — mới nhất trước. */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<AuditLogDto> history(Long id) {
         Document doc = findOrThrow(id);
         assertCanView(doc);
@@ -286,7 +373,7 @@ public class DocumentService {
     }
 
     /** Danh sách quan hệ của một văn bản (cả 2 chiều), đã resolve văn bản đối tác. */
-    @Transactional(readOnly = true)
+    @Transactional
     public List<RelationDto> relations(Long id) {
         Document doc = findOrThrow(id);
         assertCanView(doc);
@@ -317,8 +404,9 @@ public class DocumentService {
         }
     }
 
-    @Transactional(readOnly=true)
+    @Transactional
     public List<ExpiringDocumentDto> findExpiring(int withinDays) {
+        activateDueDocuments();   // tự chuyển APPROVED -> ACTIVE cho văn bản đã tới hạn, để không bỏ sót cảnh báo
         LocalDate today = LocalDate.now();
         LocalDate threshold = today.plusDays(withinDays);
         Map<Long, String> emailCache = new HashMap<>();
@@ -334,8 +422,9 @@ public class DocumentService {
                 )).toList();
     }
 
-    @Transactional(readOnly = true)
+    @Transactional
     public DashboardStatsDto dashboardStats() {
+        activateDueDocuments();   // tự chuyển APPROVED -> ACTIVE cho văn bản đã tới hạn, không chờ cron
         String role = SecurityUtil.currentRole();
         List<Document> docs = switch (role) {                 // cùng switch với list()
             case "ADMIN"           -> repo.findAll();
@@ -365,6 +454,7 @@ public class DocumentService {
             byStatus.getOrDefault(DocumentStatus.WARNING, 0L),
             byStatus.getOrDefault(DocumentStatus.EXPIRED, 0L),
             byStatus.getOrDefault(DocumentStatus.PENDING, 0L),
+            byStatus.getOrDefault(DocumentStatus.APPROVED, 0L),
             expiring);
     }
 
@@ -401,6 +491,9 @@ public class DocumentService {
         }
         if (req.expiryDate() != null && !req.expiryDate().equals(doc.getExpiryDate())) {
             changes.put("expiryDate", pair(str(doc.getExpiryDate()), str(req.expiryDate()))); doc.setExpiryDate(req.expiryDate());
+        }
+        if (req.effectiveDate() != null && !req.effectiveDate().equals(doc.getEffectiveDate())) {
+            changes.put("effectiveDate", pair(str(doc.getEffectiveDate()), str(req.effectiveDate()))); doc.setEffectiveDate(req.effectiveDate());
         }
         if (req.ownerId() != null && !req.ownerId().equals(doc.getOwnerId())) {
             changes.put("ownerId", pair(doc.getOwnerId(), req.ownerId())); doc.setOwnerId(req.ownerId());
@@ -454,8 +547,15 @@ public class DocumentService {
 
     // ---- helpers --------------------------------------------------
     private Document findOrThrow(Long id) {
-        return repo.findById(id)
+        Document doc = repo.findById(id)
                 .orElseThrow(() -> new NotFoundException("Không tìm thấy văn bản id=" + id));
+        activateIfDue(doc);   // tự chuyển APPROVED -> ACTIVE nếu đã tới hạn, không chờ cron
+        return doc;
+    }
+
+    private void assertEffectiveBeforeExpiry(LocalDate effectiveDate, LocalDate expiryDate) {
+        if (effectiveDate != null && expiryDate != null && !effectiveDate.isBefore(expiryDate))
+            throw new BusinessException("Ngày hiệu lực phải trước ngày hết hạn");
     }
 
     private void assertOwner(Document doc) {
