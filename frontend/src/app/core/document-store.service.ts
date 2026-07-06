@@ -366,8 +366,10 @@ export class DocumentStore {
 
   private errText(err: HttpErrorResponse, fallback: string): string {
     if (err.status === 0) return 'Không kết nối được máy chủ, kiểm tra backend đang chạy';
+    if (err.status === 413) return 'Tệp vượt quá dung lượng cho phép (tối đa 10MB)';
     const body = err.error;
-    if (typeof body === 'string' && body) return body;
+    // tránh hiển thị trang lỗi HTML thô (vd trang 413 của nginx)
+    if (typeof body === 'string' && body && !body.trimStart().startsWith('<')) return body;
     return body?.message ?? body?.error ?? fallback;
   }
 

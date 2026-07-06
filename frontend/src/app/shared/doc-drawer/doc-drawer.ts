@@ -86,7 +86,8 @@ export class DocDrawer {
   readonly previewUrl = computed<SafeResourceUrl | null>(() => {
     const d = this.doc();
     if (!d?.filePath || !this.isPdf()) return null;
-    return this.sanitizer.bypassSecurityTrustResourceUrl(this.fileUrl(d.filePath));
+    // #toolbar=0&navpanes=0: ẩn thanh công cụ chỉnh sửa của trình xem PDF trình duyệt
+    return this.sanitizer.bypassSecurityTrustResourceUrl(this.fileUrl(d.filePath) + '#toolbar=0&navpanes=0');
   });
 
   close(): void {
