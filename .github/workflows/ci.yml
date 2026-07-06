@@ -103,6 +103,13 @@ jobs:
             docker image prune -f
             # health-check: job phải ĐỎ nếu site không lên thật sự (tránh deploy "xanh" mà chết)
             sleep 10
+            # UI phải trả 2xx
             curl -fsS http://localhost/ -o /dev/null
-            curl -fsS http://localhost/api/notifications/alert-logs -o /dev/null
+            # API notification giờ yêu cầu JWT -> 401/403 vẫn nghĩa là nginx + service SỐNG.
+            # Chỉ coi là chết khi không có phản hồi (000) hoặc lỗi 5xx.
+            code=$(curl -s -o /dev/null -w '%{http_code}' http://localhost/api/notifications/alert-logs)
+            case "$code" in
+              2*|401|403) echo "API OK (HTTP $code)";;
+              *)          echo "API DOWN (HTTP $code)"; exit 1;;
+            esac
             echo "healthcheck OK: UI + API deu phan hoi"
