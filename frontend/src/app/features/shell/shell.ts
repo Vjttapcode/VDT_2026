@@ -48,6 +48,12 @@ export class Shell implements OnInit {
 
   readonly section = computed(() => SECTIONS[this.currentPath()] ?? SECTIONS['dashboard']);
 
+  /** KPI trạng thái chỉ có nghĩa ở nơi có danh sách văn bản để lọc → Dashboard + Văn bản. */
+  readonly showKpis = computed(() => {
+    const p = this.currentPath();
+    return p === 'dashboard' || p === 'documents';
+  });
+
   readonly kpis = computed(() => {
     const c = this.store.counts();
     const pct = c.total ? Math.round((c.active / c.total) * 100) : 0;

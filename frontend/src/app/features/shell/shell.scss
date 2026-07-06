@@ -151,22 +151,20 @@
 /* ===== KPI ===== */
 .kpi-row { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; }
 .kpi {
-  text-align: left; padding: 18px 20px; cursor: pointer; border-radius: 15px;
-  transition: transform .12s ease, box-shadow .15s ease !important;
-  &:hover { transform: translateY(-2px); }
-  .kpi-top { display: flex; align-items: flex-start; justify-content: space-between; }
+  --accent: var(--ink-3);
+  text-align: left; padding: 16px 18px; cursor: pointer; border-radius: 15px;
+  border-left: 3px solid var(--accent);
+  transition: transform .16s var(--ease), box-shadow .18s var(--ease) !important;
+  &:hover { transform: translateY(-2px); box-shadow: 0 8px 22px rgba(31, 37, 51, .08); }
+  &:active { transform: scale(.99); }
+  &.on { box-shadow: 0 0 0 2px var(--accent), 0 8px 22px rgba(31, 37, 51, .10); }
+  &.on .kpi-value { color: var(--accent); }
   .kpi-label { font-size: 12.5px; font-weight: 600; color: var(--muted); }
-  .kpi-icon {
-    width: 34px; height: 34px; border-radius: 10px; flex: none;
-    display: flex; align-items: center; justify-content: center;
-    span { width: 12px; height: 12px; border-radius: 4px; }
+  .kpi-value {
+    font-size: 30px; font-weight: 700; color: var(--ink); margin-top: 8px;
+    letter-spacing: -1.5px; transition: color .18s var(--ease);
   }
-  .kpi-value { font-size: 30px; font-weight: 700; color: var(--ink); margin-top: 8px; letter-spacing: -1.5px; }
-  .kpi-sub {
-    display: flex; align-items: center; gap: 6px; margin-top: 6px;
-    font-size: 11.5px; color: var(--muted-2);
-    .hint { font-size: 9px; }
-  }
+  .kpi-sub { margin-top: 6px; font-size: 11.5px; color: var(--muted-2); }
 }
 
 .load-error {

@@ -28,6 +28,9 @@ export class DocumentsPage {
     const f = this.store.filtered();
     return f.length > 0 && f.every(d => this.store.isSelected(d.id));
   });
+  /** văn bản đã chọn đang chờ duyệt — chỉ những văn bản này mới phê duyệt hàng loạt được */
+  readonly pendingSelected = computed(() =>
+    this.store.all().filter(d => this.store.isSelected(d.id) && d.dispStatus === 'PENDING'));
 
   goNew(): void {
     this.router.navigate(['/documents/new']);
@@ -46,7 +49,7 @@ export class DocumentsPage {
     if (ids.length && this.bulkDate >= this.minDate) this.store.bulkRenew(ids, this.bulkDate);
   }
   doBulkApprove(): void {
-    const ids = [...this.store.selectedIds()];
+    const ids = this.pendingSelected().map(d => d.id);
     if (ids.length) this.store.bulkApprove(ids);
   }
   exportCsv(): void { this.store.exportCsv(); }

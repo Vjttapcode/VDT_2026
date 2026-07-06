@@ -1,22 +1,23 @@
 @if (list().length > 0) {
-  <div class="alert-grid">
+  <div class="card alert-list">
+    <div class="list-head">
+      <span class="lh-title">Văn bản cần xử lý</span>
+      <span class="lh-count mono">{{ list().length }}</span>
+    </div>
+
     @for (a of list(); track a.id) {
-      <div class="alert-card" [style.border-left-color]="a.stripe" (click)="store.selectedId.set(a.id)">
-        <div class="row1">
-          <span class="mono code">{{ a.code }}</span>
-          <span class="status-pill" [style.background]="a.badgeBg" [style.color]="a.badgeColor">{{ a.statusVn }}</span>
-        </div>
-        <div class="name">{{ a.title }}</div>
-        <div class="row3">
-          <span class="dept">{{ a.deptName }}</span>
-          <span class="days mono" [style.color]="a.badgeColor">{{ a.daysVn }}</span>
-        </div>
-      </div>
+      <button class="alert-row" [style.--accent]="a.stripe" (click)="store.selectedId.set(a.id)">
+        <span class="mono code">{{ a.code }}</span>
+        <span class="title">{{ a.title }}</span>
+        <span class="dept ellip">{{ a.deptName }}</span>
+        <span class="days mono" [style.color]="a.badgeColor">{{ a.daysVn }}</span>
+        <span class="status-pill" [style.background]="a.badgeBg" [style.color]="a.badgeColor">{{ a.statusVn }}</span>
+      </button>
     }
   </div>
 } @else {
   <div class="card all-clear">
-    <div class="icon">✓</div>
+    <div class="ac-mark">✓</div>
     <div class="head">Không có văn bản cần xử lý</div>
     <div class="sub">
       @if (store.loading()) { Đang tải dữ liệu… }

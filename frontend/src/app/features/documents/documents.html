@@ -2,11 +2,12 @@
   <div class="table-head">
     <span class="tt">Toàn bộ văn bản · {{ store.filtered().length }}</span>
     @for (c of chips; track c.key) {
-      <button class="chip" [class.on]="store.statusFilter() === c.key"
+      <button class="chip" [attr.data-st]="c.key" [class.on]="store.statusFilter() === c.key"
+              [attr.aria-pressed]="store.statusFilter() === c.key"
               (click)="store.statusFilter.set(c.key)">{{ c.label }}</button>
     }
     <button class="chip sort" (click)="cycleSort()"
-            title="Bấm để đổi thứ tự sắp xếp: Mức khẩn → Tên A-Z → Loại">⇅ {{ sortLabels[store.sortBy()] }}</button>
+            title="Bấm để đổi thứ tự sắp xếp: Mức khẩn → Tên A-Z → Loại">Sắp xếp: {{ sortLabels[store.sortBy()] }}</button>
     <button class="chip filt" [class.on]="showFilters() || store.hasAdvancedFilter()" (click)="toggleFilters()"
             title="Bộ lọc nâng cao: loại, đơn vị, người phụ trách, thời gian hết hạn">
       ⚑ Lọc nâng cao{{ store.hasAdvancedFilter() ? ' •' : '' }}
@@ -22,8 +23,10 @@
       <input class="bb-date" type="date" [value]="bulkDate" [min]="minDate"
              (change)="bulkDate = $any($event.target).value" title="Ngày gia hạn hàng loạt">
       <button class="btn-primary sm" [disabled]="store.bulkBusy()" (click)="doBulkRenew()">Gia hạn</button>
-      @if (auth.isManager()) {
-        <button class="btn-primary sm" [disabled]="store.bulkBusy()" (click)="doBulkApprove()">Phê duyệt</button>
+      @if (auth.isManager() && pendingSelected().length > 0) {
+        <button class="btn-primary sm" [disabled]="store.bulkBusy()" (click)="doBulkApprove()">
+          Phê duyệt ({{ pendingSelected().length }})
+        </button>
       }
       <button class="btn-ghost sm" (click)="store.clearSelection()">Bỏ chọn</button>
     </div>

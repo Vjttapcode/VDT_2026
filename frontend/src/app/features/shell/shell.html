@@ -122,25 +122,21 @@
           }
         </div>
 
-        <!-- KPI ROW -->
-        <div class="kpi-row">
-          @for (k of kpis(); track k.key) {
-            <button class="kpi card" (click)="kpiClick(k.key)"
-                    [style.box-shadow]="store.statusFilter() === k.key ? '0 0 0 2px ' + k.accent : 'none'">
-              <div class="kpi-top">
+        <!-- KPI ROW — chỉ ở Dashboard + Toàn bộ văn bản -->
+        @if (showKpis()) {
+          <div class="kpi-row">
+            @for (k of kpis(); track k.key) {
+              <button class="kpi card" (click)="kpiClick(k.key)"
+                      [class.on]="store.statusFilter() === k.key"
+                      [attr.aria-pressed]="store.statusFilter() === k.key"
+                      [style.--accent]="k.accent">
                 <div class="kpi-label">{{ k.vn }}</div>
-                <span class="kpi-icon" [style.background]="k.bg">
-                  <span [style.background]="k.accent"></span>
-                </span>
-              </div>
-              <div class="kpi-value mono">{{ k.value }}</div>
-              <div class="kpi-sub">
-                <span class="hint" [style.color]="k.subColor">●</span>
-                <span>{{ k.sub }}</span>
-              </div>
-            </button>
-          }
-        </div>
+                <div class="kpi-value mono">{{ k.value }}</div>
+                <div class="kpi-sub">{{ k.sub }}</div>
+              </button>
+            }
+          </div>
+        }
 
         @if (store.loadError(); as err) {
           <div class="load-error card">

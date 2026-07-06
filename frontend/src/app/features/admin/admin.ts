@@ -53,7 +53,9 @@ export class AdminPage implements OnInit {
 
   /* ===== Tổ chức (công ty + trung tâm) ===== */
   newCompany = { name: '', code: '' };
-  newDept = { name: '', code: '', companyId: null as number | null };
+  /** modal thêm trung tâm: id công ty đang thêm (null = đóng) */
+  readonly deptModalCompanyId = signal<number | null>(null);
+  modalDept = { name: '', code: '' };
   readonly editingCompanyId = signal<number | null>(null);
   editCompany = { name: '', code: '' };
   readonly editingDeptId = signal<number | null>(null);
@@ -219,11 +221,20 @@ export class AdminPage implements OnInit {
   }
 
   /* ===== Trung tâm ===== */
-  submitDept(companyId: number): void {
-    const name = this.newDept.name.trim(), code = this.newDept.code.trim();
-    if (!name || !code) return;
+  companyName(id: number | null): string {
+    return id == null ? '' : this.admin.companies().find(c => c.id === id)?.name ?? `Công ty #${id}`;
+  }
+  openDeptModal(companyId: number): void {
+    this.modalDept = { name: '', code: '' };
+    this.deptModalCompanyId.set(companyId);
+  }
+  closeDeptModal(): void { this.deptModalCompanyId.set(null); }
+  submitDeptModal(): void {
+    const companyId = this.deptModalCompanyId();
+    const name = this.modalDept.name.trim(), code = this.modalDept.code.trim();
+    if (companyId == null || !name || !code) return;
     this.admin.createDepartment({ name, code, companyId }).subscribe({
-      next: () => { this.newDept = { name: '', code: '', companyId: null }; this.admin.load(); this.store.toast('ok', `Đã tạo trung tâm ${name}`); },
+      next: () => { this.closeDeptModal(); this.admin.load(); this.store.toast('ok', `Đã tạo trung tâm ${name}`); },
       error: err => this.store.toast('err', err.error?.message ?? 'Tạo trung tâm thất bại')
     });
   }

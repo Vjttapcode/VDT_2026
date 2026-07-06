@@ -179,15 +179,34 @@
             <div class="org-empty">Chưa có trung tâm nào.</div>
           }
 
-          <div class="org-dept add">
-            <input class="field-input" placeholder="Tên trung tâm mới" name="ndName-{{ c.id }}" [(ngModel)]="newDept.name">
-            <input class="field-input sm" placeholder="Mã" name="ndCode-{{ c.id }}" [(ngModel)]="newDept.code">
-            <button class="mini-btn ok" (click)="submitDept(c.id)">+ Thêm trung tâm</button>
-          </div>
+          <button class="add-dept-btn" (click)="openDeptModal(c.id)">+ Thêm trung tâm</button>
         </div>
       </div>
     } @empty {
       <div class="empty">Chưa có công ty nào — tạo công ty đầu tiên ở trên.</div>
+    }
+
+    <!-- modal thêm trung tâm cho một công ty -->
+    @if (deptModalCompanyId(); as cid) {
+      <div class="modal-overlay" (click)="closeDeptModal()">
+        <div class="modal-box" (click)="$event.stopPropagation()">
+          <div class="modal-title">Thêm trung tâm vào <b>{{ companyName(cid) }}</b></div>
+          <div class="modal-field">
+            <div class="field-label">Tên trung tâm</div>
+            <input class="field-input" placeholder="vd Trung tâm Phát triển phần mềm"
+                   name="mdName" [(ngModel)]="modalDept.name" autofocus>
+          </div>
+          <div class="modal-field">
+            <div class="field-label">Mã trung tâm</div>
+            <input class="field-input" placeholder="vd TT-SW" name="mdCode" [(ngModel)]="modalDept.code">
+          </div>
+          <div class="modal-actions">
+            <button class="btn-ghost" (click)="closeDeptModal()">Hủy</button>
+            <button class="btn-primary" [disabled]="!modalDept.name.trim() || !modalDept.code.trim()"
+                    (click)="submitDeptModal()">Tạo trung tâm</button>
+          </div>
+        </div>
+      </div>
     }
   } @else if (tab() === 'analytics') {
     <!-- ===== PHÂN TÍCH ===== -->

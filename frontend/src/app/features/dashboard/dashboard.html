@@ -6,7 +6,6 @@
       <!-- upload / quick add -->
       <div class="card pad">
         <div class="card-title">
-          <span class="tic" style="background:rgba(238,58,51,.12)"><span style="background:#EE3A33"></span></span>
           <span>Tải lên văn bản</span>
         </div>
         <button class="dropzone" (click)="goNew()">
@@ -23,7 +22,6 @@
       <!-- recent -->
       <div class="card pad">
         <div class="card-title">
-          <span class="tic" style="background:rgba(255,193,92,.2)"><span class="round" style="background:#E0A22E"></span></span>
           <span>Cập nhật gần đây</span>
         </div>
         <div class="recent-grid">
@@ -44,11 +42,12 @@
       <div class="table-head">
         <span class="tt">Văn bản gần đến hạn</span>
         @for (c of chips; track c.key) {
-          <button class="chip" [class.on]="store.statusFilter() === c.key"
+          <button class="chip" [attr.data-st]="c.key" [class.on]="store.statusFilter() === c.key"
+                  [attr.aria-pressed]="store.statusFilter() === c.key"
                   (click)="store.statusFilter.set(c.key)">{{ c.label }}</button>
         }
         <button class="chip sort" (click)="cycleSort()"
-                title="Bấm để đổi thứ tự sắp xếp: Mức khẩn → Tên A-Z → Loại">⇅ {{ sortLabels[store.sortBy()] }}</button>
+                title="Bấm để đổi thứ tự sắp xếp: Mức khẩn → Tên A-Z → Loại">Sắp xếp: {{ sortLabels[store.sortBy()] }}</button>
       </div>
 
       <div class="tgrid thead">

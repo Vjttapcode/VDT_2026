@@ -1,0 +1,48 @@
+// Chip lọc trạng thái dùng chung (Dashboard + Toàn bộ văn bản).
+// Mỗi trạng thái một màu riêng khi active — không đổ cùng một màu đỏ như trước.
+// Dùng: @use '../../shared/status-chips' as sc;  .chip { @include sc.chips; }
+
+@mixin chips {
+  font-size: 11.5px;
+  font-weight: 600;
+  color: var(--ink-3);
+  background: #F5F2F5;
+  border: 1px solid transparent;
+  border-radius: 8px;
+  padding: 6px 12px;
+  white-space: nowrap;
+  transition: background .18s var(--ease), color .18s var(--ease),
+              border-color .18s var(--ease), box-shadow .18s var(--ease), transform .12s var(--ease);
+
+  &:hover { background: #ECE8EC; }
+  &:active { transform: scale(.97); }
+
+  // chip điều khiển (sort / lọc / xuất) — nền trắng, active trung tính (không phải trạng thái)
+  &.sort, &.filt, &.export { background: #fff; border-color: #E2DEE4; }
+  &.sort:hover, &.filt:hover, &.export:hover { background: #F5F2F5; }
+  &.filt.on, &.export.on { color: #fff; background: var(--ink-2); border-color: var(--ink-2); }
+
+  // chip lọc trạng thái — màu theo trạng thái
+  &[data-st] {
+    --c: var(--ink-3);
+    --tint: #F1EEF1;
+    --on-bg: var(--ink-2);
+    --on-fg: #fff;
+    color: var(--c);
+    background: var(--tint);
+    border-color: transparent;
+
+    &:hover:not(.on) { filter: brightness(.965); }
+
+    &.on {
+      background: var(--on-bg);
+      color: var(--on-fg);
+      border-color: var(--on-bg);
+      box-shadow: 0 3px 10px rgba(31, 37, 51, .16);
+    }
+  }
+  &[data-st="ACTIVE"]  { --c: #1B7F50; --tint: rgba(30, 142, 90, .12);  --on-bg: #1E8E5A; }
+  &[data-st="WARNING"] { --c: #9A6400; --tint: rgba(224, 162, 46, .20); --on-bg: #E0A22E; --on-fg: #3E2C00; }
+  &[data-st="EXPIRED"] { --c: #C62B26; --tint: rgba(226, 47, 41, .12);  --on-bg: #E22F29; }
+  &[data-st="PENDING"] { --c: #3B6BB5; --tint: rgba(59, 107, 181, .13); --on-bg: #3B6BB5; }
+}
