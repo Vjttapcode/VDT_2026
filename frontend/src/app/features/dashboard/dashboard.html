@@ -2,43 +2,57 @@
 
   <!-- ===== LEFT COLUMN ===== -->
   <div class="left-col">
-    <div class="top-cards">
-      <!-- upload / quick add -->
-      <div class="card pad">
-        <div class="card-title">
-          <span>Tải lên văn bản</span>
-        </div>
-        <button class="dropzone" (click)="goNew()">
-          <div class="drop-icon">
-            <svg viewBox="0 0 24 24" fill="none" stroke="#EE3A33" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M12 19V5"/><path d="m5 12 7-7 7 7"/>
-            </svg>
+    <!-- ===== biểu đồ tổng quan ===== -->
+    <div class="charts-row">
+      <!-- donut: tình trạng hiệu lực -->
+      <section class="card pad chart-mini">
+        <div class="card-title"><span>Tình trạng hiệu lực</span></div>
+        <div class="donut-wrap">
+          <svg class="donut" viewBox="0 0 120 120" aria-hidden="true">
+            <circle cx="60" cy="60" r="52" fill="none" stroke="#F0ECF0" stroke-width="13" />
+            @for (s of statusSegments(); track s.key) {
+              @if (s.value > 0) {
+                <circle cx="60" cy="60" r="52" fill="none" [attr.stroke]="s.color" stroke-width="13"
+                        [attr.stroke-dasharray]="s.arc + ' ' + RING_C"
+                        [attr.transform]="'rotate(' + s.rot + ' 60 60)'" />
+              }
+            }
+          </svg>
+          <div class="donut-center">
+            <div class="dc-value mono">{{ store.counts().total }}</div>
+            <div class="dc-label">văn bản</div>
           </div>
-          <div class="drop-text">Thêm văn bản mới<br>kèm tệp PDF/Word xem trước</div>
-        </button>
-        <button class="btn-primary full" (click)="goNew()">Thêm văn bản</button>
-      </div>
-
-      <!-- recent -->
-      <div class="card pad">
-        <div class="card-title">
-          <span>Cập nhật gần đây</span>
         </div>
-        <div class="recent-grid">
-          @for (r of store.recent(); track r.id) {
-            <div class="doc-row recent-item" (click)="store.selectedId.set(r.id)">
-              <span class="ric" [style.background]="r.iconBg"><span [style.background]="r.iconFg"></span></span>
-              <span class="rname">{{ r.title }}</span>
+        <ul class="legend">
+          @for (s of statusSegments(); track s.key) {
+            <li>
+              <span class="lg-dot" [style.background]="s.color"></span>
+              <span class="lg-label">{{ s.label }}</span>
+              <span class="lg-val mono">{{ s.value }}</span>
+            </li>
+          }
+        </ul>
+      </section>
+
+      <!-- thanh ngang: phân bố theo loại -->
+      <section class="card pad chart-mini">
+        <div class="card-title"><span>Phân bố theo loại</span></div>
+        <div class="type-list">
+          @for (t of byType(); track t.key) {
+            <div class="type-row">
+              <span class="type-lb">{{ t.label }}</span>
+              <span class="type-track">
+                <span class="type-bar" [style.width.%]="t.pct" [style.background]="t.color"></span>
+              </span>
+              <span class="type-val mono">{{ t.value }}</span>
             </div>
-          } @empty {
-            <div class="empty-sm">Chưa có văn bản nào.</div>
           }
         </div>
-      </div>
+      </section>
     </div>
 
     <!-- ===== overview table ===== -->
-    <div class="card table-card">
+    <section class="card table-card">
       <div class="table-head">
         <span class="tt">Văn bản gần đến hạn</span>
         @for (c of chips; track c.key) {
@@ -92,13 +106,13 @@
           </div>
         }
       }
-    </div>
+    </section>
   </div>
 
   <!-- ===== RIGHT COLUMN ===== -->
   <div class="right-col">
     <!-- bar chart + tổng quan năm -->
-    <div class="card pad chart-card">
+    <section class="card pad chart-card">
       <div class="chart-head">
         <span class="tt">Hết hạn theo tháng</span>
         <span class="range-tag mono">01 - 12 / {{ year }}</span>
@@ -129,6 +143,21 @@
           }
         </div>
       </div>
-    </div>
+    </section>
+
+    <!-- cập nhật gần đây -->
+    <section class="card pad">
+      <div class="card-title"><span>Cập nhật gần đây</span></div>
+      <div class="recent-grid">
+        @for (r of store.recent(); track r.id) {
+          <button class="doc-row recent-item" (click)="store.selectedId.set(r.id)">
+            <span class="ric" [style.background]="r.iconBg"><span [style.background]="r.iconFg"></span></span>
+            <span class="rname">{{ r.title }}</span>
+          </button>
+        } @empty {
+          <div class="empty-sm">Chưa có văn bản nào.</div>
+        }
+      </div>
+    </section>
   </div>
 </div>

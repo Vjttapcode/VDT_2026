@@ -7,43 +7,62 @@
 .left-col { display: flex; flex-direction: column; gap: 20px; min-width: 0; }
 .right-col { display: flex; flex-direction: column; gap: 20px; }
 
-.top-cards {
-  display: grid; grid-template-columns: 1fr 1.25fr; gap: 20px;
-  > * { min-width: 0; } // chặn grid blowout từ nội dung nowrap bên trong
-}
-
 .pad { padding: 18px 20px; }
 
 .card-title {
-  display: flex; align-items: center; gap: 9px; margin-bottom: 14px;
+  display: flex; align-items: center; gap: 9px; margin-bottom: 16px;
   span { font-size: 14px; font-weight: 700; color: var(--ink); }
 }
 
-/* upload */
-.dropzone {
-  display: block; width: 100%;
-  border: 2px dashed #E2DEE4; border-radius: 12px; padding: 24px 14px;
-  text-align: center; background: #FBFAFB;
-  transition: border-color .15s ease, background .15s ease;
-  &:hover { border-color: var(--red-light); background: #FDF6F5; }
-  .drop-icon {
-    width: 42px; height: 42px; border-radius: 50%; background: rgba(238, 58, 51, .1);
-    margin: 0 auto 10px; display: flex; align-items: center; justify-content: center;
-    svg { width: 17px; height: 17px; }
-  }
-  .drop-text { font-size: 12.5px; color: var(--muted); line-height: 1.5; }
-}
-.full { width: 100%; margin-top: 14px; }
-
-/* recent */
-.recent-grid {
-  display: grid; grid-template-columns: 1fr 1fr; gap: 2px 18px;
+/* ===== biểu đồ tổng quan ===== */
+.charts-row {
+  display: grid; grid-template-columns: 1fr 1fr; gap: 20px;
   > * { min-width: 0; }
 }
+.chart-mini { display: flex; flex-direction: column; }
+
+/* donut — tình trạng hiệu lực */
+.donut-wrap {
+  position: relative; width: 148px; height: 148px; margin: 4px auto 6px;
+  .donut { width: 100%; height: 100%; transform: rotate(0deg); }
+  .donut-center {
+    position: absolute; inset: 0; display: flex; flex-direction: column;
+    align-items: center; justify-content: center; pointer-events: none;
+    .dc-value { font-size: 30px; font-weight: 700; color: var(--ink); letter-spacing: -1px; line-height: 1; }
+    .dc-label { font-size: 11px; color: var(--muted-2); margin-top: 2px; }
+  }
+}
+.legend {
+  list-style: none; margin: 6px 0 0; padding: 0;
+  display: grid; grid-template-columns: 1fr 1fr; gap: 8px 16px;
+  li { display: flex; align-items: center; gap: 7px; }
+  .lg-dot { width: 9px; height: 9px; border-radius: 3px; flex: none; }
+  .lg-label { font-size: 11.5px; color: var(--ink-3); flex: 1; white-space: nowrap; }
+  .lg-val { font-size: 12px; font-weight: 600; color: var(--ink-2); }
+}
+
+/* phân bố theo loại — thanh ngang */
+.type-list { display: flex; flex-direction: column; gap: 15px; padding-top: 4px; }
+.type-row {
+  display: grid; grid-template-columns: 74px 1fr 28px; align-items: center; gap: 10px;
+  .type-lb { font-size: 12px; color: var(--ink-3); }
+  .type-track { height: 8px; background: #F1EEF1; border-radius: 6px; overflow: hidden; }
+  .type-bar {
+    display: block; height: 100%; border-radius: 6px; min-width: 3px;
+    transition: width .5s var(--ease);
+  }
+  .type-val { font-size: 12px; font-weight: 600; color: var(--ink-2); text-align: right; }
+}
+
+/* recent */
+.recent-grid { display: flex; flex-direction: column; gap: 2px; }
 .recent-item {
-  display: flex; align-items: center; gap: 9px; padding: 6px 4px;
-  border-radius: 7px; cursor: pointer; min-width: 0;
-  .rname { font-size: 12px; color: #3A4250; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  display: flex; align-items: center; gap: 9px; padding: 7px 6px; width: 100%;
+  border: none; background: none; text-align: left;
+  border-radius: 8px; cursor: pointer; min-width: 0;
+  transition: background .15s var(--ease);
+  &:hover { background: #FBF6F6; }
+  .rname { font-size: 12.5px; color: #3A4250; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 }
 .ric {
   width: 22px; height: 22px; border-radius: 6px; flex: none;
@@ -123,13 +142,12 @@
   .right-col { flex-direction: row; > * { flex: 1; } }
 }
 @media (max-width: 860px) {
-  .top-cards { grid-template-columns: 1fr; }
+  .charts-row { grid-template-columns: 1fr; }
   .right-col { flex-direction: column; }
   /* bảng cuộn ngang TRONG card */
   .table-card { overflow-x: auto; }
   .tgrid { min-width: 640px; }
 }
 @media (max-width: 560px) {
-  .recent-grid { grid-template-columns: 1fr; }
   .bars { gap: 3px; }
 }

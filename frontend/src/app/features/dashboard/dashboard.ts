@@ -1,6 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { DocumentStore, StatusFilter } from '../../core/document-store.service';
+import { DocType } from '../../core/models';
 
 @Component({
   selector: 'app-dashboard',
@@ -14,9 +15,48 @@ export class DashboardPage {
 
   readonly year = new Date().getFullYear();
 
+  /** chu vi vòng donut (r = 52) */
+  readonly RING_C = 2 * Math.PI * 52;
+
   goNew(): void {
     this.router.navigate(['/documents/new']);
   }
+
+  /** Các cung của donut "Tình trạng hiệu lực" — mỗi trạng thái một màu. */
+  readonly statusSegments = computed(() => {
+    const c = this.store.counts();
+    const order = [
+      { key: 'ACTIVE',  label: 'Còn hiệu lực', value: c.active,  color: '#1E8E5A' },
+      { key: 'WARNING', label: 'Sắp hết hạn',  value: c.warning, color: '#E0A22E' },
+      { key: 'EXPIRED', label: 'Đã hết hạn',   value: c.expired, color: '#E22F29' },
+      { key: 'PENDING', label: 'Chờ xử lý',    value: c.pending, color: '#3B6BB5' }
+    ];
+    const total = order.reduce((s, o) => s + o.value, 0) || 1;
+    let acc = 0;
+    return order.map(o => {
+      const frac = o.value / total;
+      const seg = { ...o, pct: Math.round(frac * 100), arc: frac * this.RING_C, rot: acc * 360 - 90 };
+      acc += frac;
+      return seg;
+    });
+  });
+
+  /** Phân bố văn bản theo loại — thanh ngang. */
+  readonly byType = computed(() => {
+    const all = this.store.all();
+    const max = Math.max(1, ...(['CONTRACT', 'LICENSE', 'CERTIFICATE', 'SR'] as DocType[])
+      .map(t => all.filter(d => d.type === t).length));
+    const meta: { key: DocType; label: string; color: string }[] = [
+      { key: 'CONTRACT',    label: 'Hợp đồng',  color: '#3B6BB5' },
+      { key: 'LICENSE',     label: 'Giấy phép', color: '#E22F29' },
+      { key: 'CERTIFICATE', label: 'Chứng chỉ', color: '#1E8E5A' },
+      { key: 'SR',          label: 'SR nội bộ', color: '#E0A22E' }
+    ];
+    return meta.map(m => {
+      const value = all.filter(d => d.type === m.key).length;
+      return { ...m, value, pct: Math.round((value / max) * 100) };
+    });
+  });
 
   readonly chips: { key: StatusFilter; label: string }[] = [
     { key: 'all', label: 'Tất cả' },
