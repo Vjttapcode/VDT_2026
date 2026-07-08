@@ -4,6 +4,7 @@
   --red: #E22F29;
   --red-light: #EE3A33;
   --red-dark: #C62B26;
+  --green-dark: #1B7F50;
   --bg: #EFECEF;
   --ink: #1F2533;
   --ink-2: #2A323F;
@@ -17,6 +18,26 @@
   --blue: #3B6BB5;
   --dark-card: #20242E;
   --gold: #FFD15C;
+  --teal: #0E7490;
+  --purple: #7A5AF0;
+  --purple-dark: #5A46C0;
+  --purple-tint: #F4F1FE;
+  --purple-tint-border: #DED6FB;
+  /* neutrals — nền/hover phẳng theo 3 cấp đậm dần (thay ~15 mã hex gần giống nhau đã trôi dạt) */
+  --surface-1: #FAF8FA;
+  --surface-2: #F5F2F5;
+  --surface-3: #ECE8EC;
+  --hairline: #F0ECF0;
+  --border-3: #E2DEE4;
+  --row-hover: #FBF6F6;
+  --muted-3: #9A95A2;
+  --muted-4: #C9C3CD;
+  --red-glow: #FF6A62;
+  --red-tint: #FDECEB;
+  --red-tint-hover: #FBDDDB;
+  --red-tint-border: #F8D5D3;
+  --amber-tint: #FFF8F1;
+  --amber-tint-border: #F7E4CE;
   --font-mono: 'IBM Plex Mono', monospace;
   /* motion — nhịp chuyển động nhất quán (có "sức nặng") thay ease rời rạc */
   --ease: cubic-bezier(.32, .72, 0, 1);
@@ -108,7 +129,7 @@ button { cursor: pointer; }
 }
 
 .doc-row { transition: background .12s ease; }
-.doc-row:hover { background: #FBF6F6; }
+.doc-row:hover { background: var(--row-hover); }
 
 .status-pill {
   font-size: 10.5px; font-weight: 600; border-radius: 20px; padding: 3px 10px; white-space: nowrap;

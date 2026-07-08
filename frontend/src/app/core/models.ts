@@ -1,3 +1,13 @@
+/** Bảng màu dùng chung cho các theme bên dưới — khớp token CSS trong styles.scss. */
+const C = {
+  green: '#1E8E5A', greenDark: '#1B7F50',
+  amber: '#E0A22E', amberDark: '#9A6400',
+  red: '#E22F29', redDark: '#C62B26',
+  blue: '#3B6BB5', teal: '#0E7490', purple: '#7A5AF0',
+  grey: '#5A6072', greyMuted: '#7A7480', greyDark: '#6E6876', greyBg: '#F0EDF0',
+  muted2: '#9A95A2'
+} as const;
+
 export type Role = 'USER' | 'MANAGER_CENTER' | 'MANAGER_COMPANY' | 'ADMIN';
 export type DocType = 'CONTRACT' | 'LICENSE' | 'CERTIFICATE' | 'SR';
 export type DocLevel = 'CENTER' | 'COMPANY' | 'GROUP';
@@ -54,9 +64,9 @@ export const REL_TYPE_VN: Record<RelationType, string> = {
 };
 
 export const REL_TYPE_COLOR: Record<RelationType, string> = {
-  REPLACE: '#7A5AF0',
-  REPEAL: '#C62B26',
-  AMEND: '#3B6BB5'
+  REPLACE: C.purple,
+  REPEAL: C.redDark,
+  AMEND: C.blue
 };
 
 /** Nhãn quan hệ theo chiều: [OUTGOING, INCOMING]. */
@@ -97,18 +107,18 @@ export const AUDIT_ACTION_VN: Record<AuditAction, string> = {
 
 /** Màu chấm mốc thời gian theo loại hành động. */
 export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
-  CREATE: '#3B6BB5',
-  UPDATE: '#9A6400',
-  SUBMIT: '#3B6BB5',
-  APPROVE: '#1E8E5A',
-  REJECT: '#C62B26',
-  RENEW: '#1E8E5A',
-  REPLACE: '#7A5AF0',
-  REPEAL: '#C62B26',
-  AMEND: '#3B6BB5',
-  ADMIN_OVERRIDE: '#9A6400',
-  EFFECTIVE: '#1E8E5A',
-  SET_EFFECTIVE: '#0E7490'
+  CREATE: C.blue,
+  UPDATE: C.amberDark,
+  SUBMIT: C.blue,
+  APPROVE: C.green,
+  REJECT: C.redDark,
+  RENEW: C.green,
+  REPLACE: C.purple,
+  REPEAL: C.redDark,
+  AMEND: C.blue,
+  ADMIN_OVERRIDE: C.amberDark,
+  EFFECTIVE: C.green,
+  SET_EFFECTIVE: C.teal
 };
 
 /** Nhãn tiếng Việt cho các trường trong diff changes. */
@@ -171,21 +181,21 @@ export const DEPT_VN: Record<number, string> = {
 export interface StatusTheme { vn: string; bg: string; color: string; stripe: string; }
 
 export const STATUS_THEME: Record<DocStatus, StatusTheme> = {
-  ACTIVE:   { vn: 'Còn hiệu lực', bg: 'rgba(30,142,90,.12)',   color: '#1B7F50', stripe: '#1E8E5A' },
-  WARNING:  { vn: 'Sắp hết hạn',  bg: 'rgba(224,162,46,.14)',  color: '#9A6400', stripe: '#E0A22E' },
-  EXPIRED:  { vn: 'Đã hết hạn',   bg: 'rgba(226,47,41,.10)',   color: '#C62B26', stripe: '#E22F29' },
-  PENDING:  { vn: 'Chờ duyệt',    bg: 'rgba(75,123,229,.14)',  color: '#3B6BB5', stripe: '#3B6BB5' },
-  APPROVED: { vn: 'Chờ hiệu lực', bg: 'rgba(14,116,144,.12)',  color: '#0E7490', stripe: '#0E7490' },
-  DRAFT:    { vn: 'Nháp',         bg: '#F0EDF0',               color: '#5A6072', stripe: '#9A95A2' },
-  REJECTED: { vn: 'Bị từ chối',   bg: 'rgba(122,116,128,.16)', color: '#6E6876', stripe: '#7A7480' }
+  ACTIVE:   { vn: 'Còn hiệu lực', bg: 'rgba(30,142,90,.12)',   color: C.greenDark, stripe: C.green },
+  WARNING:  { vn: 'Sắp hết hạn',  bg: 'rgba(224,162,46,.14)',  color: C.amberDark, stripe: C.amber },
+  EXPIRED:  { vn: 'Đã hết hạn',   bg: 'rgba(226,47,41,.10)',   color: C.redDark,   stripe: C.red },
+  PENDING:  { vn: 'Chờ duyệt',    bg: 'rgba(75,123,229,.14)',  color: C.blue,      stripe: C.blue },
+  APPROVED: { vn: 'Chờ hiệu lực', bg: 'rgba(14,116,144,.12)',  color: C.teal,      stripe: C.teal },
+  DRAFT:    { vn: 'Nháp',         bg: C.greyBg,                color: C.grey,      stripe: C.muted2 },
+  REJECTED: { vn: 'Bị từ chối',   bg: 'rgba(122,116,128,.16)', color: C.greyDark,  stripe: C.greyMuted }
 };
 
 /** [iconBg, iconFg] theo loại văn bản */
 export const TYPE_THEME: Record<DocType, [string, string]> = {
-  CONTRACT:    ['rgba(75,123,229,.14)', '#3B6BB5'],
-  LICENSE:     ['rgba(226,47,41,.12)', '#E22F29'],
-  CERTIFICATE: ['rgba(30,142,90,.14)', '#1E8E5A'],
-  SR:          ['rgba(224,162,46,.16)', '#E0A22E']
+  CONTRACT:    ['rgba(75,123,229,.14)', C.blue],
+  LICENSE:     ['rgba(226,47,41,.12)', C.red],
+  CERTIFICATE: ['rgba(30,142,90,.14)', C.green],
+  SR:          ['rgba(224,162,46,.16)', C.amber]
 };
 
 /** Văn bản đã "trình bày" cho UI */

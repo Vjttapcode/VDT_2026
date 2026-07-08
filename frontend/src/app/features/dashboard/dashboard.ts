@@ -1,7 +1,7 @@
 import { Component, computed, inject } from '@angular/core';
 import { Router } from '@angular/router';
 import { DocumentStore, StatusFilter } from '../../core/document-store.service';
-import { DocType } from '../../core/models';
+import { DocType, STATUS_THEME, TYPE_THEME } from '../../core/models';
 
 @Component({
   selector: 'app-dashboard',
@@ -26,11 +26,11 @@ export class DashboardPage {
   readonly statusSegments = computed(() => {
     const c = this.store.counts();
     const order = [
-      { key: 'ACTIVE',   label: 'Còn hiệu lực', value: c.active,   color: '#1E8E5A' },
-      { key: 'WARNING',  label: 'Sắp hết hạn',  value: c.warning,  color: '#E0A22E' },
-      { key: 'EXPIRED',  label: 'Đã hết hạn',   value: c.expired,  color: '#E22F29' },
-      { key: 'APPROVED', label: 'Chờ hiệu lực', value: c.approved, color: '#0E7490' },
-      { key: 'PENDING',  label: 'Chờ xử lý',    value: c.pending,  color: '#3B6BB5' }
+      { key: 'ACTIVE',   label: 'Còn hiệu lực', value: c.active,   color: STATUS_THEME.ACTIVE.stripe },
+      { key: 'WARNING',  label: 'Sắp hết hạn',  value: c.warning,  color: STATUS_THEME.WARNING.stripe },
+      { key: 'EXPIRED',  label: 'Đã hết hạn',   value: c.expired,  color: STATUS_THEME.EXPIRED.stripe },
+      { key: 'APPROVED', label: 'Chờ hiệu lực', value: c.approved, color: STATUS_THEME.APPROVED.stripe },
+      { key: 'PENDING',  label: 'Chờ xử lý',    value: c.pending,  color: STATUS_THEME.PENDING.stripe }
     ];
     const total = order.reduce((s, o) => s + o.value, 0) || 1;
     let acc = 0;
@@ -48,10 +48,10 @@ export class DashboardPage {
     const max = Math.max(1, ...(['CONTRACT', 'LICENSE', 'CERTIFICATE', 'SR'] as DocType[])
       .map(t => all.filter(d => d.type === t).length));
     const meta: { key: DocType; label: string; color: string }[] = [
-      { key: 'CONTRACT',    label: 'Hợp đồng',  color: '#3B6BB5' },
-      { key: 'LICENSE',     label: 'Giấy phép', color: '#E22F29' },
-      { key: 'CERTIFICATE', label: 'Chứng chỉ', color: '#1E8E5A' },
-      { key: 'SR',          label: 'SR nội bộ', color: '#E0A22E' }
+      { key: 'CONTRACT',    label: 'Hợp đồng',  color: TYPE_THEME.CONTRACT[1] },
+      { key: 'LICENSE',     label: 'Giấy phép', color: TYPE_THEME.LICENSE[1] },
+      { key: 'CERTIFICATE', label: 'Chứng chỉ', color: TYPE_THEME.CERTIFICATE[1] },
+      { key: 'SR',          label: 'SR nội bộ', color: TYPE_THEME.SR[1] }
     ];
     return meta.map(m => {
       const value = all.filter(d => d.type === m.key).length;

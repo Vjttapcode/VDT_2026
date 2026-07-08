@@ -9,7 +9,7 @@
         <div class="card-title"><span>Tình trạng hiệu lực</span></div>
         <div class="donut-wrap">
           <svg class="donut" viewBox="0 0 120 120" aria-hidden="true">
-            <circle cx="60" cy="60" r="52" fill="none" stroke="#F0ECF0" stroke-width="13" />
+            <circle cx="60" cy="60" r="52" fill="none" stroke="var(--hairline)" stroke-width="13" />
             @for (s of statusSegments(); track s.key) {
               @if (s.value > 0) {
                 <circle cx="60" cy="60" r="52" fill="none" [attr.stroke]="s.color" stroke-width="13"
@@ -120,11 +120,11 @@
 
       <div class="year-stats">
         <div class="ys">
-          <div class="ys-value mono" style="color:#1B7F50">{{ donut().onTime }}</div>
+          <div class="ys-value mono" style="color:var(--green-dark)">{{ donut().onTime }}</div>
           <div class="ys-label">đúng hạn</div>
         </div>
         <div class="ys">
-          <div class="ys-value mono" style="color:#C62B26">{{ donut().riskPct }}</div>
+          <div class="ys-value mono" style="color:var(--red-dark)">{{ donut().riskPct }}</div>
           <div class="ys-label">cần chú ý</div>
         </div>
         <div class="ys">
