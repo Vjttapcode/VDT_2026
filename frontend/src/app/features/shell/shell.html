@@ -125,11 +125,11 @@
         <!-- KPI ROW — chỉ ở Dashboard + Toàn bộ văn bản -->
         @if (showKpis()) {
           <div class="kpi-row">
-            @for (k of kpis(); track k.key) {
+            @for (k of kpis(); track k.key; let i = $index) {
               <button class="kpi card" (click)="kpiClick(k.key)"
                       [class.on]="store.statusFilter() === k.key"
                       [attr.aria-pressed]="store.statusFilter() === k.key"
-                      [style.--accent]="k.accent">
+                      [style.--accent]="k.accent" [style.--i]="i">
                 <div class="kpi-label">{{ k.vn }}</div>
                 <div class="kpi-value mono">{{ k.value }}</div>
                 <div class="kpi-sub">{{ k.sub }}</div>

@@ -1,3 +1,5 @@
+:host { display: block; animation: pageIn .32s var(--ease-out); }
+
 .table-card { overflow: hidden; }
 
 .table-head {
@@ -43,6 +45,8 @@
 }
 .trow {
   border-top: 1px solid #F4F0F4;
+  animation: riseIn .3s var(--ease-out) both;
+  @for $i from 1 through 10 { &:nth-child(#{$i}) { animation-delay: #{$i * 25}ms; } }
   &.clickable { cursor: pointer; }
 }
 

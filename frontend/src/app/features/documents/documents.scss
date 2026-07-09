@@ -1,5 +1,7 @@
 @use '../../shared/status-chips' as sc;
 
+:host { display: block; animation: pageIn .32s var(--ease-out); }
+
 .table-card { overflow: hidden; }
 
 /* mobile: bảng cuộn ngang TRONG card, không phá bề rộng trang */
@@ -58,7 +60,11 @@
   padding: 11px 20px; font-size: 10px; font-weight: 600; color: var(--muted-2);
   letter-spacing: .3px; text-transform: uppercase;
 }
-.trow { border-top: 1px solid #F4F0F4; cursor: pointer; }
+.trow {
+  border-top: 1px solid #F4F0F4; cursor: pointer;
+  animation: riseIn .3s var(--ease-out) both;
+  @for $i from 1 through 10 { &:nth-child(#{$i}) { animation-delay: #{$i * 25}ms; } }
+}
 
 .code { font-size: 11px; color: var(--blue); font-weight: 500; }
 

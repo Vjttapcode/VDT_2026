@@ -1,3 +1,5 @@
+:host { display: block; animation: pageIn .32s var(--ease-out); }
+
 .cal-wrap { display: flex; flex-direction: column; gap: 16px; }
 
 .cal-head {
@@ -13,7 +15,12 @@
 .month {
   padding: 16px 18px; display: flex; flex-direction: column; gap: 10px;
   min-height: 120px;
+  animation: riseIn .36s var(--ease-out) both;
+  transition: box-shadow .18s var(--ease), transform .16s var(--ease);
+  @for $i from 1 through 12 { &:nth-child(#{$i}) { animation-delay: #{$i * 30}ms; } }
+  &:hover { transform: translateY(-2px); box-shadow: var(--shadow-sm); }
   &.current { box-shadow: 0 0 0 2px var(--red-light); }
+  &.current:hover { box-shadow: 0 0 0 2px var(--red-light), var(--shadow-sm); }
 }
 
 .month-head {
