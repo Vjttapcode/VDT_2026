@@ -64,12 +64,28 @@
                   }
                 </select>
                 <div class="field-label" style="margin-top:10px">Văn bản đối tác (văn bản cũ)</div>
-                <select class="field-input" [(ngModel)]="relateTargetId">
-                  <option [ngValue]="null" disabled>— Chọn văn bản —</option>
-                  @for (c of relateCandidates(); track c.id) {
-                    <option [ngValue]="c.id">{{ c.code }} · {{ c.title }}</option>
-                  }
-                </select>
+                @if (relateSelected(); as sel) {
+                  <div class="rel-chosen">
+                    <span class="rc-text"><span class="mono">{{ sel.code }}</span> · {{ sel.title }}</span>
+                    <button type="button" class="rc-change" (click)="clearRelatePick()">Đổi</button>
+                  </div>
+                } @else {
+                  <div class="rel-picker">
+                    <input class="field-input" type="text" [value]="relateQuery()"
+                           (input)="relateQuery.set($any($event.target).value)"
+                           placeholder="Gõ mã hoặc tên văn bản để tìm…">
+                    <div class="rel-options">
+                      @for (c of relateFiltered(); track c.id) {
+                        <button type="button" class="rel-option" (click)="pickRelate(c.id)">
+                          <span class="mono ro-code">{{ c.code }}</span>
+                          <span class="ro-title">{{ c.title }}</span>
+                        </button>
+                      } @empty {
+                        <div class="rel-option ro-empty">Không tìm thấy văn bản khớp</div>
+                      }
+                    </div>
+                  </div>
+                }
                 <div class="rel-hint">
                   @switch (relateType) {
                     @case ('REPLACE') { Văn bản cũ sẽ được đánh dấu <b>hết hiệu lực</b>. }
@@ -79,7 +95,7 @@
                 </div>
                 <div class="box-actions">
                   <button class="btn-ghost" (click)="relateOpen.set(false)">Hủy</button>
-                  <button class="btn-primary" [disabled]="relateTargetId == null" (click)="confirmRelate()">Xác nhận</button>
+                  <button class="btn-primary" [disabled]="relateTargetId() == null" (click)="confirmRelate()">Xác nhận</button>
                 </div>
               </div>
             }

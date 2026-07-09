@@ -72,6 +72,9 @@ export class AdminPage implements OnInit {
   editRole: Role = 'USER';
   editDeptId: number | null = 1;
 
+  /** hàng đang xác nhận xóa tài khoản: null = không xác nhận */
+  readonly confirmUserId = signal<number | null>(null);
+
   form: RegisterRequest = { ...EMPTY_FORM };
   readonly creating = signal(false);
 
@@ -145,6 +148,21 @@ export class AdminPage implements OnInit {
 
   isSelf(u: UserDto): boolean {
     return u.id === this.auth.user()?.userId;
+  }
+
+  /** Xóa vĩnh viễn tài khoản (backend chặn tự xóa). */
+  removeUser(u: UserDto): void {
+    this.admin.deleteUser(u.id).subscribe({
+      next: () => {
+        this.confirmUserId.set(null);
+        this.admin.load();
+        this.store.toast('ok', `Đã xóa tài khoản ${u.email}`);
+      },
+      error: err => {
+        this.confirmUserId.set(null);
+        this.store.toast('err', err.error?.message ?? 'Xóa tài khoản thất bại');
+      }
+    });
   }
 
   /* ===== tạo user ===== */

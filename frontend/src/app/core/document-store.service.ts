@@ -1,4 +1,4 @@
-import { Injectable, computed, inject, signal } from '@angular/core';
+import { Injectable, computed, effect, inject, signal } from '@angular/core';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
@@ -59,6 +59,20 @@ export class DocumentStore {
   readonly selectedIds = signal<Set<number>>(new Set());
   readonly bulkBusy = signal(false);
 
+  /* ===== phân trang danh sách ===== */
+  readonly page = signal(1);
+  readonly pageSize = signal(12);
+
+  constructor() {
+    // đổi bộ lọc / sắp xếp → quay về trang 1 để không kẹt ở trang trống
+    effect(() => {
+      this.query(); this.statusFilter(); this.sortBy();
+      this.typeFilter(); this.deptFilter(); this.ownerQuery();
+      this.expiryFrom(); this.expiryTo(); this.pageSize();
+      this.page.set(1);
+    });
+  }
+
   /* ===== derived ===== */
   readonly all = computed<DocView[]>(() => this.docs().map(d => this.present(d)));
 
@@ -85,6 +99,26 @@ export class DocumentStore {
       type: (a, b) => a.typeVn.localeCompare(b.typeVn, 'vi')
     };
     return this.all().filter(match).sort(sorters[this.sortBy()]);
+  });
+
+  /* ===== phân trang (paged là tập render trên bảng; filtered giữ nguyên cho CSV/chọn tất cả) ===== */
+  readonly pageCount = computed(() => Math.max(1, Math.ceil(this.filtered().length / this.pageSize())));
+
+  /** Trang hiện tại đã kẹp trong [1, pageCount] để luôn hợp lệ khi số kết quả đổi. */
+  readonly currentPage = computed(() => Math.min(Math.max(1, this.page()), this.pageCount()));
+
+  readonly paged = computed<DocView[]>(() => {
+    const start = (this.currentPage() - 1) * this.pageSize();
+    return this.filtered().slice(start, start + this.pageSize());
+  });
+
+  /** Nhãn "x–y / tổng văn bản" cho thanh phân trang. */
+  readonly pageRangeText = computed(() => {
+    const total = this.filtered().length;
+    if (total === 0) return '0 văn bản';
+    const start = (this.currentPage() - 1) * this.pageSize() + 1;
+    const end = Math.min(start + this.pageSize() - 1, total);
+    return `${start}–${end} / ${total} văn bản`;
   });
 
   /* ===== tuỳ chọn cho dropdown lọc — chỉ hiện giá trị đang có trong phạm vi role ===== */
@@ -328,6 +362,11 @@ export class DocumentStore {
       error: err => this.toast('err', this.errText(err, 'Không tải được tệp lên'))
     });
   }
+
+  /* ===== phân trang ===== */
+  setPage(n: number): void { this.page.set(Math.min(Math.max(1, n), this.pageCount())); }
+  nextPage(): void { this.setPage(this.currentPage() + 1); }
+  prevPage(): void { this.setPage(this.currentPage() - 1); }
 
   /* ===== chọn nhiều / thao tác hàng loạt ===== */
   toggleSelect(id: number): void {

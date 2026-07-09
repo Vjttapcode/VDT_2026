@@ -86,6 +86,10 @@ export class AdminService {
     return this.http.put<UserDto>(`/api/auth/users/${u.id}`, u);
   }
 
+  deleteUser(id: number): Observable<void> {
+    return this.http.delete<void>(`/api/auth/users/${id}`);
+  }
+
   /* ===== Công ty ===== */
   createCompany(c: Omit<CompanyDto, 'id'>): Observable<CompanyDto> {
     return this.http.post<CompanyDto>('/api/auth/companies', c);

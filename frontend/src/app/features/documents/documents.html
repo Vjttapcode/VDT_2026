@@ -81,7 +81,7 @@
     <span>Mã</span><span>Tên · Name</span><span>Loại</span><span>Đơn vị</span><span>Phụ trách</span><span>Hết hạn</span><span>Trạng thái</span>
   </div>
 
-  @for (d of store.filtered(); track d.id) {
+  @for (d of store.paged(); track d.id) {
     <div class="tgrid doc-row trow" [class.picked]="store.isSelected(d.id)" (click)="store.selectedId.set(d.id)">
       <span class="ck"><input type="checkbox" [checked]="store.isSelected(d.id)" (click)="onRowCheck(d.id, $event)"></span>
       <span class="mono code">{{ d.code }}</span>
@@ -123,5 +123,16 @@
         <button class="btn-primary" (click)="goNew()">+ Thêm văn bản đầu tiên</button>
       </div>
     }
+  }
+
+  @if (store.filtered().length > store.pageSize()) {
+    <div class="pager">
+      <span class="pager-info">{{ store.pageRangeText() }}</span>
+      <div class="pager-ctrls">
+        <button class="pg-btn" [disabled]="store.currentPage() === 1" (click)="store.prevPage()">‹ Trước</button>
+        <span class="pg-cur mono">Trang {{ store.currentPage() }}/{{ store.pageCount() }}</span>
+        <button class="pg-btn" [disabled]="store.currentPage() === store.pageCount()" (click)="store.nextPage()">Sau ›</button>
+      </div>
+    </div>
   }
 </div>

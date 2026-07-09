@@ -56,6 +56,13 @@
               <button class="mini-btn" title="Đổi vai trò" (click)="startEdit(u)">Đổi vai trò</button>
               <button class="mini-btn" [class.warn]="u.isActive !== false"
                       (click)="toggleActive(u)">{{ u.isActive === false ? 'Mở khóa' : 'Khóa' }}</button>
+              @if (confirmUserId() === u.id) {
+                <button class="mini-btn warn" (click)="removeUser(u)">Chắc chắn xóa?</button>
+                <button class="mini-btn" (click)="confirmUserId.set(null)">Hủy</button>
+              } @else {
+                <button class="mini-btn warn" title="Xóa vĩnh viễn tài khoản"
+                        (click)="confirmUserId.set(u.id)">Xóa</button>
+              }
             }
           </span>
         </div>

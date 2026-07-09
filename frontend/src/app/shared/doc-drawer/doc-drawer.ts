@@ -29,7 +29,8 @@ export class DocDrawer {
   renewDate = '';
 
   readonly relateOpen = signal(false);
-  relateTargetId: number | null = null;
+  readonly relateTargetId = signal<number | null>(null);
+  readonly relateQuery = signal('');
   relateType: RelationType = 'REPLACE';
 
   readonly effectiveOpen = signal(false);
@@ -73,6 +74,17 @@ export class DocDrawer {
   readonly relateCandidates = computed(() =>
     this.store.all().filter(d => d.id !== this.doc()?.id));
 
+  /** kết quả lọc theo từ khóa (mã / tên / loại) cho combobox tìm kiếm — tối đa 20 dòng */
+  readonly relateFiltered = computed(() => {
+    const q = this.relateQuery().trim().toLowerCase();
+    const list = this.relateCandidates();
+    return (q ? list.filter(c => `${c.code} ${c.title} ${c.typeVn}`.toLowerCase().includes(q)) : list).slice(0, 20);
+  });
+
+  /** văn bản đối tác đang chọn (để hiển thị chip đã chọn) */
+  readonly relateSelected = computed(() =>
+    this.relateCandidates().find(c => c.id === this.relateTargetId()) ?? null);
+
   /** Chủ sở hữu hoặc quản lý mới được thao tác vòng đời */
   readonly isOwner = computed(() => this.doc()?.ownerId === this.auth.user()?.userId);
   readonly canApprove = computed(() => this.doc()?.dispStatus === 'PENDING' && this.auth.isManager());
@@ -113,7 +125,8 @@ export class DocDrawer {
     this.rejectReason.set('');
     this.confirmingDelete.set(false);
     this.relateOpen.set(false);
-    this.relateTargetId = null;
+    this.relateTargetId.set(null);
+    this.relateQuery.set('');
     this.relateType = 'REPLACE';
     this.overrideOpen.set(false);
     this.effectiveOpen.set(false);
@@ -150,15 +163,29 @@ export class DocDrawer {
   }
 
   openRelate(): void {
-    this.relateTargetId = null;
+    this.relateTargetId.set(null);
+    this.relateQuery.set('');
     this.relateType = 'REPLACE';
     this.relateOpen.set(true);
   }
 
+  /** chọn văn bản đối tác từ danh sách gợi ý */
+  pickRelate(id: number): void {
+    this.relateTargetId.set(id);
+    this.relateQuery.set('');
+  }
+
+  /** bỏ chọn để tìm lại */
+  clearRelatePick(): void {
+    this.relateTargetId.set(null);
+    this.relateQuery.set('');
+  }
+
   confirmRelate(): void {
     const d = this.doc();
-    if (!d || this.relateTargetId == null) return;
-    this.store.relate(d.id, +this.relateTargetId, this.relateType);
+    const target = this.relateTargetId();
+    if (!d || target == null) return;
+    this.store.relate(d.id, target, this.relateType);
     this.relateOpen.set(false);
   }
 
