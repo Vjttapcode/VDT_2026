@@ -1,14 +1,14 @@
-import { Component, OnInit, computed, inject, signal } from '@angular/core';
+import { Component, OnInit, computed, effect, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { AdminAnalytics, AdminService, CompanyDto, RegisterRequest, UserDto } from '../../core/admin.service';
 import { DepartmentDto } from '../../core/admin.service';
 import { AlertConfig, NotificationService } from '../../core/notification.service';
 import { DocumentStore } from '../../core/document-store.service';
 import { AuthService } from '../../core/auth.service';
-import { DEPT_VN, LEVEL_VN, Role, ROLE_VN } from '../../core/models';
+import { DEPT_VN, LEVEL_VN, Role, ROLE_THEME, ROLE_VN } from '../../core/models';
 
 const EMPTY_FORM: RegisterRequest = {
-  email: '', password: '', fullName: '', role: 'USER', departmentId: 1, companyId: null
+  email: '', password: '', fullName: '', role: 'USER', departmentId: null, companyId: null
 };
 
 @Component({
@@ -70,7 +70,8 @@ export class AdminPage implements OnInit {
   /** hàng đang sửa role: null = không sửa */
   readonly editingId = signal<number | null>(null);
   editRole: Role = 'USER';
-  editDeptId: number | null = 1;
+  editDeptId: number | null = null;
+  editCompanyId: number | null = null;
 
   /** hàng đang xác nhận xóa tài khoản: null = không xác nhận */
   readonly confirmUserId = signal<number | null>(null);
@@ -80,7 +81,53 @@ export class AdminPage implements OnInit {
 
   readonly roleOptions = (Object.keys(ROLE_VN) as Role[]).map(r => ({ value: r, label: ROLE_VN[r] }));
   readonly roleVn = ROLE_VN;
+  readonly roleTheme = ROLE_THEME;
   readonly levelVn = LEVEL_VN;
+
+  /* ===== Bộ lọc + tìm kiếm danh sách user ===== */
+  readonly search = signal('');
+  readonly filterCompanyId = signal<number | null>(null);
+  readonly filterDeptId = signal<number | null>(null);
+  readonly filterRole = signal<Role | ''>('');
+  readonly filterActive = signal<'' | 'active' | 'locked'>('');
+
+  /** trung tâm hiển thị trong dropdown lọc, cascade theo công ty đã chọn */
+  readonly filterDepts = computed(() => this.deptsForCompany(this.filterCompanyId()));
+
+  readonly filteredUsers = computed(() => {
+    const q = this.search().trim().toLowerCase();
+    const fc = this.filterCompanyId();
+    const fd = this.filterDeptId();
+    const fr = this.filterRole();
+    const fa = this.filterActive();
+    return this.admin.users().filter(u => {
+      if (q && !u.fullName.toLowerCase().includes(q) && !u.email.toLowerCase().includes(q)) return false;
+      if (fc != null && this.companyIdOf(u) !== fc) return false;
+      if (fd != null && u.departmentId !== fd) return false;
+      if (fr && u.role !== fr) return false;
+      if (fa === 'active' && u.isActive === false) return false;
+      if (fa === 'locked' && u.isActive !== false) return false;
+      return true;
+    });
+  });
+
+  readonly hasFilter = computed(() =>
+    !!this.search().trim() || this.filterCompanyId() != null || this.filterDeptId() != null
+    || !!this.filterRole() || !!this.filterActive());
+
+  clearFilters(): void {
+    this.search.set('');
+    this.filterCompanyId.set(null);
+    this.filterDeptId.set(null);
+    this.filterRole.set('');
+    this.filterActive.set('');
+  }
+
+  onFilterCompanyChange(): void {
+    // đổi công ty lọc -> bỏ chọn trung tâm nếu không còn thuộc công ty đó
+    const fd = this.filterDeptId();
+    if (fd != null && !this.filterDepts().some(d => d.id === fd)) this.filterDeptId.set(null);
+  }
 
   readonly depts = computed(() => {
     const loaded = this.admin.departments();
@@ -94,14 +141,51 @@ export class AdminPage implements OnInit {
     GROUP: 'Văn bản cấp Tập đoàn'
   };
 
+  constructor() {
+    // Khi danh sách công ty tải xong, gán mặc định cho form tạo (nếu chưa chọn).
+    effect(() => {
+      const cos = this.admin.companies();
+      if (cos.length && this.form.role !== 'ADMIN' && this.form.companyId == null) {
+        this.form.companyId = cos[0].id;
+        this.syncFormDept();
+      }
+    });
+  }
+
   ngOnInit(): void {
     this.admin.load();
     this.loadConfigs();
     this.loadAnalytics();
   }
 
+  /* ===== Helper tổ chức dùng chung ===== */
+
+  /** Công ty hiệu lực của user: MANAGER_COMPANY dùng companyId; center-role suy từ trung tâm; ADMIN = null. */
+  companyIdOf(u: UserDto): number | null {
+    if (u.role === 'MANAGER_COMPANY') return u.companyId;
+    if (u.departmentId != null) return this.admin.departments().find(d => d.id === u.departmentId)?.companyId ?? null;
+    return null;
+  }
+
+  companyNameOf(u: UserDto): string {
+    const id = this.companyIdOf(u);
+    return id == null ? '—' : this.admin.companies().find(c => c.id === id)?.name ?? `Công ty #${id}`;
+  }
+
+  /** Trung tâm hiển thị: center-role -> tên; MANAGER_COMPANY -> "Toàn công ty"; ADMIN -> "—". */
+  deptCellOf(u: UserDto): string {
+    if (u.role === 'MANAGER_COMPANY') return 'Toàn công ty';
+    if (u.role === 'ADMIN') return '—';
+    return this.deptName(u.departmentId);
+  }
+
+  deptsForCompany(companyId: number | null): DepartmentDto[] {
+    const all = this.admin.departments();
+    return companyId == null ? all : all.filter(d => d.companyId === companyId);
+  }
+
   deptName(id: number | null): string {
-    if (id == null) return '-';
+    if (id == null) return '—';
     return this.depts().find(d => d.id === id)?.name ?? `Phòng ban #${id}`;
   }
 
@@ -109,12 +193,32 @@ export class AdminPage implements OnInit {
     return role === 'USER' || role === 'MANAGER_CENTER';
   }
 
-  /* ===== đổi role ===== */
+  /* ===== đổi role (inline) ===== */
 
   startEdit(u: UserDto): void {
     this.editingId.set(u.id);
     this.editRole = u.role;
-    this.editDeptId = u.departmentId ?? 1;
+    this.editCompanyId = this.companyIdOf(u) ?? this.admin.companies()[0]?.id ?? null;
+    this.editDeptId = u.departmentId ?? this.deptsForCompany(this.editCompanyId)[0]?.id ?? null;
+  }
+
+  onEditRoleChange(): void {
+    if (this.needsDept(this.editRole)) {
+      this.editCompanyId = this.editCompanyId ?? this.admin.companies()[0]?.id ?? null;
+      this.syncEditDept();
+    } else if (this.editRole === 'MANAGER_COMPANY') {
+      this.editCompanyId = this.editCompanyId ?? this.admin.companies()[0]?.id ?? null;
+    }
+  }
+
+  onEditCompanyChange(): void {
+    if (this.needsDept(this.editRole)) this.syncEditDept();
+  }
+
+  /** Đảm bảo editDeptId là một trung tâm thuộc editCompanyId. */
+  private syncEditDept(): void {
+    const list = this.deptsForCompany(this.editCompanyId);
+    if (!list.some(d => d.id === this.editDeptId)) this.editDeptId = list[0]?.id ?? null;
   }
 
   confirmEdit(u: UserDto): void {
@@ -123,7 +227,7 @@ export class AdminPage implements OnInit {
       ...u,
       role,
       departmentId: this.needsDept(role) ? this.editDeptId : null,
-      companyId: role === 'MANAGER_COMPANY' ? (u.companyId ?? 1) : null
+      companyId: role === 'MANAGER_COMPANY' ? this.editCompanyId : null
     };
     this.admin.update(payload).subscribe({
       next: () => {
@@ -169,33 +273,50 @@ export class AdminPage implements OnInit {
 
   onFormRoleChange(): void {
     if (this.needsDept(this.form.role)) {
-      this.form.departmentId = this.form.departmentId ?? 1;
-      this.form.companyId = null;
+      this.form.companyId = this.form.companyId ?? this.admin.companies()[0]?.id ?? null;
+      this.syncFormDept();
     } else if (this.form.role === 'MANAGER_COMPANY') {
+      this.form.companyId = this.form.companyId ?? this.admin.companies()[0]?.id ?? null;
       this.form.departmentId = null;
-      this.form.companyId = 1;
     } else {
       this.form.departmentId = null;
       this.form.companyId = null;
     }
   }
 
+  onFormCompanyChange(): void {
+    if (this.needsDept(this.form.role)) this.syncFormDept();
+  }
+
+  /** Đảm bảo form.departmentId là một trung tâm thuộc form.companyId. */
+  private syncFormDept(): void {
+    const list = this.deptsForCompany(this.form.companyId);
+    if (!list.some(d => d.id === this.form.departmentId)) this.form.departmentId = list[0]?.id ?? null;
+  }
+
   formValid(): boolean {
-    return !!this.form.email.trim() && this.form.password.length >= 6 && !!this.form.fullName.trim()
-      && (!this.needsDept(this.form.role) || this.form.departmentId != null);
+    const base = !!this.form.email.trim() && this.form.password.length >= 6 && !!this.form.fullName.trim();
+    if (!base) return false;
+    if (this.needsDept(this.form.role)) return this.form.departmentId != null;
+    if (this.form.role === 'MANAGER_COMPANY') return this.form.companyId != null;
+    return true;
   }
 
   submitCreate(): void {
     if (!this.formValid() || this.creating()) return;
+    const role = this.form.role;
     this.creating.set(true);
     this.admin.register({
       ...this.form,
       email: this.form.email.trim(),
-      fullName: this.form.fullName.trim()
+      fullName: this.form.fullName.trim(),
+      departmentId: this.needsDept(role) ? this.form.departmentId : null,
+      companyId: role === 'MANAGER_COMPANY' ? this.form.companyId : null
     }).subscribe({
       next: u => {
         this.creating.set(false);
         this.form = { ...EMPTY_FORM };
+        this.onFormRoleChange(); // gán lại công ty/trung tâm mặc định
         this.admin.load();
         this.store.toast('ok', `Đã tạo tài khoản ${u.email}`);
       },
@@ -237,6 +358,8 @@ export class AdminPage implements OnInit {
       error: err => { this.confirmCompanyId.set(null); this.store.toast('err', err.error?.message ?? 'Xóa công ty thất bại'); }
     });
   }
+
+  /* ===== Phân tích ===== */
 
   /* ===== Trung tâm ===== */
   companyName(id: number | null): string {

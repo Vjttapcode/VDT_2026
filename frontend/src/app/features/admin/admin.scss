@@ -83,14 +83,42 @@
 /* ===== users table ===== */
 .table-card { overflow: hidden; }
 .table-head {
-  display: flex; align-items: center; gap: 10px; padding: 14px 20px;
+  display: flex; align-items: baseline; gap: 8px; padding: 14px 20px;
   border-bottom: 1px solid #F0ECF0;
   .tt { font-size: 15px; font-weight: 700; color: var(--ink); }
+  .tt-count {
+    font-size: 12px; font-weight: 600; color: var(--muted-2);
+    background: #F5F2F5; border-radius: 20px; padding: 2px 10px;
+  }
+}
+
+/* ===== filter toolbar ===== */
+.filter-bar {
+  display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  padding: 12px 16px;
+}
+.fb-search {
+  display: flex; align-items: center; gap: 6px; flex: 1; min-width: 200px;
+  background: #FAF8FA; border: 1px solid var(--border-2); border-radius: 9px; padding: 0 10px;
+  transition: border-color .15s var(--ease);
+  &:focus-within { border-color: var(--red-light); }
+  .fb-ico { font-size: 12px; opacity: .6; }
+  .fb-input {
+    flex: 1; border: none; background: transparent; outline: none;
+    font-size: 12.5px; color: var(--ink); padding: 8px 0;
+  }
+}
+.fb-select {
+  font-size: 12px; color: var(--ink);
+  background: #FAF8FA; border: 1px solid var(--border-2); border-radius: 9px;
+  padding: 8px 10px; outline: none; cursor: pointer;
+  transition: border-color .15s var(--ease);
+  &:focus { border-color: var(--red-light); }
 }
 
 .tgrid {
   display: grid;
-  grid-template-columns: 1.3fr 1.2fr 1.4fr 1.1fr 100px 170px;
+  grid-template-columns: 1.5fr 1.1fr 1.15fr .9fr 1.1fr 92px 168px;
   align-items: center; gap: 12px; padding: 12px 20px;
 }
 .thead {
@@ -111,6 +139,11 @@
 }
 .sm { font-size: 11.5px; color: var(--ink-3); }
 .role { font-weight: 600; }
+.role-badge {
+  justify-self: start;
+  font-size: 11px; font-weight: 600; line-height: 1;
+  border-radius: 20px; padding: 5px 11px; white-space: nowrap;
+}
 .ellip { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .status-pill {
@@ -148,6 +181,11 @@
   display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px 16px; align-items: end;
   .submit-cell { display: flex; align-items: flex-end; }
   .btn-primary { display: flex; align-items: center; gap: 8px; }
+}
+.admin-note-box {
+  font-size: 12px; color: var(--ink-3); line-height: 1.45;
+  background: #FAF8FA; border: 1px dashed var(--border-2); border-radius: 9px;
+  padding: 9px 12px;
 }
 
 /* ===== configs ===== */
@@ -187,14 +225,20 @@
 @media (max-width: 1080px) {
   .config-grid { grid-template-columns: 1fr; }
   .create-grid { grid-template-columns: 1fr 1fr; }
-  .tgrid { grid-template-columns: 1.3fr 1.2fr 1.4fr 150px; }
+  /* ẩn cột Công ty (4) + Trung tâm (5) — vai trò badge vẫn cho biết phạm vi */
+  .tgrid { grid-template-columns: 1.4fr 1.1fr 1.2fr 92px 168px; }
   .thead span:nth-child(4), .trow > span:nth-child(4),
   .thead span:nth-child(5), .trow > span:nth-child(5) { display: none; }
 }
 
-/* mobile: bảng cuộn ngang TRONG card, form 1 cột */
+/* mobile: bảng cuộn ngang TRONG card (hiện lại đủ cột), form 1 cột */
 @media (max-width: 640px) {
   .table-card { overflow-x: auto; }
-  .tgrid { min-width: 560px; }
+  .tgrid {
+    min-width: 720px;
+    grid-template-columns: 1.5fr 1.1fr 1.15fr .9fr 1.1fr 92px 168px;
+  }
+  .thead span:nth-child(4), .trow > span:nth-child(4),
+  .thead span:nth-child(5), .trow > span:nth-child(5) { display: block; }
   .create-grid { grid-template-columns: 1fr; }
 }

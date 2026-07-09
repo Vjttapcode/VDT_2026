@@ -9,50 +9,93 @@
   </div>
 
   @if (tab() === 'users') {
+    <!-- ===== FILTER TOOLBAR ===== -->
+    <div class="filter-bar card">
+      <div class="fb-search">
+        <span class="fb-ico">🔍</span>
+        <input class="fb-input" type="text" name="search" placeholder="Tìm theo tên hoặc email…"
+               [ngModel]="search()" (ngModelChange)="search.set($event)">
+      </div>
+      <select class="fb-select" name="fCompany" [ngModel]="filterCompanyId()"
+              (ngModelChange)="filterCompanyId.set($event); onFilterCompanyChange()">
+        <option [ngValue]="null">Tất cả công ty</option>
+        @for (co of admin.companies(); track co.id) { <option [ngValue]="co.id">{{ co.name }}</option> }
+      </select>
+      <select class="fb-select" name="fDept" [ngModel]="filterDeptId()" (ngModelChange)="filterDeptId.set($event)">
+        <option [ngValue]="null">Tất cả trung tâm</option>
+        @for (d of filterDepts(); track d.id) { <option [ngValue]="d.id">{{ d.name }}</option> }
+      </select>
+      <select class="fb-select" name="fRole" [ngModel]="filterRole()" (ngModelChange)="filterRole.set($event)">
+        <option [ngValue]="''">Tất cả vai trò</option>
+        @for (r of roleOptions; track r.value) { <option [ngValue]="r.value">{{ r.label }}</option> }
+      </select>
+      <select class="fb-select" name="fActive" [ngModel]="filterActive()" (ngModelChange)="filterActive.set($event)">
+        <option [ngValue]="''">Mọi trạng thái</option>
+        <option [ngValue]="'active'">Hoạt động</option>
+        <option [ngValue]="'locked'">Đã khóa</option>
+      </select>
+      @if (hasFilter()) {
+        <button class="mini-btn" (click)="clearFilters()">✕ Xóa lọc</button>
+      }
+    </div>
+
     <!-- ===== USERS TABLE ===== -->
     <div class="card table-card">
       <div class="table-head">
-        <span class="tt">Người dùng · {{ admin.users().length }}</span>
+        <span class="tt">Người dùng</span>
+        <span class="tt-count">{{ filteredUsers().length }}@if (hasFilter()) { / {{ admin.users().length }} }</span>
       </div>
 
       <div class="tgrid thead">
-        <span>Email</span><span>Họ tên</span><span>Vai trò</span><span>Phòng ban</span><span>Trạng thái</span><span></span>
+        <span>Email</span><span>Họ tên</span><span>Vai trò</span><span>Công ty</span><span>Trung tâm</span><span>Trạng thái</span><span></span>
       </div>
 
-      @for (u of admin.users(); track u.id) {
+      @for (u of filteredUsers(); track u.id) {
         <div class="tgrid trow">
           <span class="mono email">{{ u.email }}</span>
           <span class="name">{{ u.fullName }}@if (isSelf(u)) { <span class="you">bạn</span> }</span>
 
+          <!-- Vai trò -->
           @if (editingId() === u.id) {
-            <span class="edit-cell">
-              <select class="filter-input" name="editRole-{{ u.id }}" [(ngModel)]="editRole">
-                @for (r of roleOptions; track r.value) {
-                  <option [ngValue]="r.value">{{ r.label }}</option>
-                }
-              </select>
-              @if (needsDept(editRole)) {
-                <select class="filter-input" name="editDept-{{ u.id }}" [(ngModel)]="editDeptId">
-                  @for (d of depts(); track d.id) {
-                    <option [ngValue]="d.id">{{ d.name }}</option>
-                  }
-                </select>
+            <select class="filter-input" name="editRole-{{ u.id }}" [(ngModel)]="editRole" (ngModelChange)="onEditRoleChange()">
+              @for (r of roleOptions; track r.value) {
+                <option [ngValue]="r.value">{{ r.label }}</option>
               }
-              <button class="mini-btn ok" (click)="confirmEdit(u)">✓</button>
-              <button class="mini-btn" (click)="editingId.set(null)">✕</button>
-            </span>
+            </select>
           } @else {
-            <span class="sm role">{{ roleVn[u.role] }}</span>
+            <span class="role-badge" [style.background]="roleTheme[u.role].bg" [style.color]="roleTheme[u.role].color">
+              {{ roleVn[u.role] }}
+            </span>
           }
 
-          <span class="sm ellip">{{ deptName(u.departmentId) }}</span>
+          <!-- Công ty -->
+          @if (editingId() === u.id && editRole !== 'ADMIN') {
+            <select class="filter-input" name="editCo-{{ u.id }}" [(ngModel)]="editCompanyId" (ngModelChange)="onEditCompanyChange()">
+              @for (co of admin.companies(); track co.id) { <option [ngValue]="co.id">{{ co.name }}</option> }
+            </select>
+          } @else {
+            <span class="sm ellip">{{ companyNameOf(u) }}</span>
+          }
+
+          <!-- Trung tâm -->
+          @if (editingId() === u.id && needsDept(editRole)) {
+            <select class="filter-input" name="editDept-{{ u.id }}" [(ngModel)]="editDeptId">
+              @for (d of deptsForCompany(editCompanyId); track d.id) { <option [ngValue]="d.id">{{ d.name }}</option> }
+            </select>
+          } @else {
+            <span class="sm ellip">{{ editingId() === u.id ? '—' : deptCellOf(u) }}</span>
+          }
+
           <span>
             <span class="status-pill" [class.ok]="u.isActive !== false" [class.off]="u.isActive === false">
               {{ u.isActive === false ? 'Đã khóa' : 'Hoạt động' }}
             </span>
           </span>
           <span class="actions">
-            @if (!isSelf(u) && editingId() !== u.id) {
+            @if (editingId() === u.id) {
+              <button class="mini-btn ok" (click)="confirmEdit(u)">✓ Lưu</button>
+              <button class="mini-btn" (click)="editingId.set(null)">✕</button>
+            } @else if (!isSelf(u)) {
               <button class="mini-btn" title="Đổi vai trò" (click)="startEdit(u)">Đổi vai trò</button>
               <button class="mini-btn" [class.warn]="u.isActive !== false"
                       (click)="toggleActive(u)">{{ u.isActive === false ? 'Mở khóa' : 'Khóa' }}</button>
@@ -70,6 +113,7 @@
         <div class="empty">
           @if (admin.loading()) { Đang tải danh sách… }
           @else if (admin.loadError(); as err) { {{ err }} }
+          @else if (hasFilter()) { Không có người dùng khớp bộ lọc. }
           @else { Chưa có người dùng nào. }
         </div>
       }
@@ -102,25 +146,36 @@
             }
           </select>
         </div>
-        @if (needsDept(form.role)) {
-          <div>
-            <div class="field-label">Trung tâm</div>
-            <select class="field-input" name="departmentId" [(ngModel)]="form.departmentId">
-              @for (d of depts(); track d.id) {
-                <option [ngValue]="d.id">{{ d.name }}</option>
-              }
-            </select>
+
+        @if (form.role === 'ADMIN') {
+          <div class="admin-note">
+            <div class="field-label">Phạm vi</div>
+            <div class="admin-note-box">Quản trị toàn hệ thống — không thuộc công ty hay trung tâm nào.</div>
           </div>
-        } @else if (form.role === 'MANAGER_COMPANY') {
+        } @else {
+          <!-- Công ty: hiển thị cho mọi vai trò trừ ADMIN -->
           <div>
             <div class="field-label">Công ty</div>
-            <select class="field-input" name="companyId" [(ngModel)]="form.companyId">
+            <select class="field-input" name="companyId" [(ngModel)]="form.companyId" (ngModelChange)="onFormCompanyChange()">
               @for (co of admin.companies(); track co.id) {
                 <option [ngValue]="co.id">{{ co.name }}</option>
               }
             </select>
           </div>
+          @if (needsDept(form.role)) {
+            <div>
+              <div class="field-label">Trung tâm</div>
+              <select class="field-input" name="departmentId" [(ngModel)]="form.departmentId">
+                @for (d of deptsForCompany(form.companyId); track d.id) {
+                  <option [ngValue]="d.id">{{ d.name }}</option>
+                } @empty {
+                  <option [ngValue]="null" disabled>Công ty chưa có trung tâm</option>
+                }
+              </select>
+            </div>
+          }
         }
+
         <div class="submit-cell">
           <button class="btn-primary" type="submit" [disabled]="!formValid() || creating()">
             @if (creating()) { <span class="spinner"></span> }

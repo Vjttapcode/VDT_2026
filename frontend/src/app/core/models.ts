@@ -192,6 +192,14 @@ export const ROLE_VN: Record<Role, string> = {
   ADMIN: 'Quản trị Tập đoàn'
 };
 
+/** Badge màu cho vai trò trong bảng quản trị người dùng. */
+export const ROLE_THEME: Record<Role, { bg: string; color: string }> = {
+  USER:            { bg: 'rgba(30,142,90,.12)',  color: C.greenDark },
+  MANAGER_CENTER:  { bg: 'rgba(14,116,144,.12)', color: C.teal },
+  MANAGER_COMPANY: { bg: 'rgba(59,107,181,.14)', color: C.blue },
+  ADMIN:           { bg: 'rgba(226,47,41,.10)',  color: C.redDark }
+};
+
 /** Seed data hiện có 3 trung tâm; fallback khi không gọi được API departments. */
 export const DEPT_VN: Record<number, string> = {
   1: 'TT Phát triển phần mềm',
