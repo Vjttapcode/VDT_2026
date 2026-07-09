@@ -60,3 +60,9 @@ management:
   endpoint:
     health:
       show-details: never
+  health:
+    mail:
+      # Không cho SMTP bên ngoài (Gmail) quyết định health của service:
+      # mail fail đã có retry + alert_log xử lý; nếu gate ở đây thì Gmail chập chờn
+      # sẽ kéo container unhealthy -> nginx/scheduler không start -> sập cả deploy.
+      enabled: false
