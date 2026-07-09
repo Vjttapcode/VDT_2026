@@ -10,6 +10,7 @@ public record DocumentResponse(
         Long ownerId, String ownerName, Long departmentId, Long companyId,
         LocalDate expiryDate, LocalDate issuedDate, LocalDate effectiveDate,
         String filePath, Integer renewalCount, Long supersedesId,
+        String version,
         LocalDateTime createdAt, LocalDateTime updatedAt) {
 
     public static DocumentResponse from(Document d) {
@@ -23,6 +24,7 @@ public record DocumentResponse(
                 d.getOwnerId(), ownerName, d.getDepartmentId(), d.getCompanyId(),
                 d.getExpiryDate(), d.getIssuedDate(), d.getEffectiveDate(),
                 d.getFilePath(), d.getRenewalCount(), d.getSupersedesId(),
+                d.versionString(),
                 d.getCreatedAt(), d.getUpdatedAt());
     }
 }

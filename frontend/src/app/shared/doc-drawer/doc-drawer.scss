@@ -132,6 +132,20 @@
   b { color: var(--ink-3); }
 }
 
+/* ===== lịch sử phiên bản ban hành ===== */
+.versions-sec { border-top: 1px solid #F0ECF0; padding-top: 16px; }
+.ver-badge {
+  display: inline-block; margin-left: 8px; font-size: 11px; font-weight: 700;
+  color: #5A46C0; background: #F4F1FE; border: 1px solid #DED6FB;
+  border-radius: 6px; padding: 2px 8px; vertical-align: middle;
+}
+.ver-pill {
+  font-size: 11px; font-weight: 700; color: #5A46C0; white-space: nowrap;
+  background: #F4F1FE; border: 1px solid #DED6FB; border-radius: 6px; padding: 3px 9px; flex: none;
+  &.current { color: #fff; background: #7A5AF0; border-color: #7A5AF0; }
+}
+.ver-meta { font-size: 11px; color: var(--muted-2); }
+
 /* ===== lịch sử thay đổi (audit log) ===== */
 .history-sec { border-top: 1px solid #F0ECF0; padding-top: 16px; }
 .hist-head {

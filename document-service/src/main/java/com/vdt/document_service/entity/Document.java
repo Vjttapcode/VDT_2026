@@ -80,6 +80,13 @@ public class Document {
     @Column(name = "supersedes_id")
     private Long supersedesId;
 
+    /** Phiên bản v{major}.{minor} — bắt đầu 1.0; mỗi lần tái ban hành tăng minor. */
+    @Column(name = "version_major", nullable = false)
+    private Short versionMajor;
+
+    @Column(name = "version_minor", nullable = false)
+    private Short versionMinor;
+
     @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createdAt;
 
@@ -93,6 +100,13 @@ public class Document {
         updatedAt = now;
         if (status == null) status = DocumentStatus.DRAFT;
         if (renewalCount == null) renewalCount = 0;
+        if (versionMajor == null) versionMajor = (short) 1;
+        if (versionMinor == null) versionMinor = (short) 0;
+    }
+
+    /** Chuỗi phiên bản hiển thị, vd "1.0". */
+    public String versionString() {
+        return versionMajor + "." + versionMinor;
     }
 
     @PreUpdate

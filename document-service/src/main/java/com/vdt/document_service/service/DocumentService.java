@@ -31,11 +31,13 @@ import com.vdt.document_service.dto.DashboardStatsDto;
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
 import com.vdt.document_service.dto.ExpiringDocumentDto;
+import com.vdt.document_service.dto.DocumentVersionDto;
 import com.vdt.document_service.dto.RelationDto;
 import com.vdt.document_service.entity.ApprovalRequest;
 import com.vdt.document_service.entity.Document;
 import com.vdt.document_service.entity.DocumentRelation;
 import com.vdt.document_service.entity.DocumentStatus;
+import com.vdt.document_service.entity.DocumentVersion;
 import com.vdt.document_service.entity.NotificationOutbox;
 import com.vdt.document_service.entity.RelationType;
 import com.vdt.document_service.exception.BusinessException;
@@ -44,6 +46,7 @@ import com.vdt.document_service.exception.NotFoundException;
 import com.vdt.document_service.repository.ApprovalRequestRepository;
 import com.vdt.document_service.repository.DocumentRelationRepository;
 import com.vdt.document_service.repository.DocumentRepository;
+import com.vdt.document_service.repository.DocumentVersionRepository;
 import com.vdt.document_service.repository.NotificationOutboxRepository;
 import com.vdt.document_service.util.SecurityUtil;
 
@@ -54,6 +57,7 @@ public class DocumentService {
     private final ApprovalRequestRepository approvalRepo;
     private final NotificationOutboxRepository outboxRepo;
     private final DocumentRelationRepository relationRepo;
+    private final DocumentVersionRepository versionRepo;
     private final ObjectMapper objectMapper;
     private final String uploadDir;
     private final AuthClient authClient;
@@ -67,12 +71,14 @@ public class DocumentService {
 
     public DocumentService(DocumentRepository repo, ApprovalRequestRepository approvalRepo,
         NotificationOutboxRepository outboxRepo, DocumentRelationRepository relationRepo,
+        DocumentVersionRepository versionRepo,
         ObjectMapper objectMapper,
         @Value("${app.upload-dir:uploads}") String uploadDir, AuthClient authClient) {
         this.repo = repo;
         this.approvalRepo = approvalRepo;
         this.outboxRepo = outboxRepo;
         this.relationRepo = relationRepo;
+        this.versionRepo = versionRepo;
         this.objectMapper = objectMapper;
         this.uploadDir = uploadDir;
         this.authClient = authClient;
@@ -166,10 +172,12 @@ public class DocumentService {
     public void delete(Long id) {
         Document doc = findOrThrow(id);
         assertOwner(doc);
-        // approval_requests / notification_outbox / document_relations tham chiếu documents không có ON DELETE CASCADE
+        // approval_requests / notification_outbox / document_relations / document_versions
+        // tham chiếu documents không có ON DELETE CASCADE
         approvalRepo.deleteByDocumentId(id);
         outboxRepo.deleteByDocumentId(id);
         relationRepo.deleteByFromDocIdOrToDocId(id, id);
+        versionRepo.deleteByDocumentId(id);
         repo.delete(doc);
     }
 
@@ -190,6 +198,7 @@ public class DocumentService {
     /**
      * Duyệt văn bản: issuedDate = ngày duyệt (ngày ban hành).
      * effectiveDate null hoặc <= hôm nay -> ACTIVE ngay; tương lai -> APPROVED chờ job kích hoạt.
+     * Lần đầu (issuedDate == null) giữ v1.0; tái ban hành tăng minor. Cả 2 nhánh đều chụp snapshot.
      */
     @Transactional
     public DocumentResponse approve(Long id){
@@ -198,16 +207,76 @@ public class DocumentService {
         LocalDate today = LocalDate.now();
         boolean effectiveNow = doc.getEffectiveDate() == null || !doc.getEffectiveDate().isAfter(today);
         DocumentStatus newStatus = effectiveNow ? DocumentStatus.ACTIVE : DocumentStatus.APPROVED;
+        boolean reissue = doc.getIssuedDate() != null;   // đã từng ban hành -> đây là tái ban hành
+        LocalDate oldIssued = doc.getIssuedDate();
+        Map<String, Object> changes = new LinkedHashMap<>();
+        if (reissue) {
+            String oldVersion = doc.versionString();
+            doc.setVersionMinor((short) (doc.getVersionMinor() + 1));
+            changes.put("version", pair(oldVersion, doc.versionString()));
+        }
         doc.setIssuedDate(today);
         doc.setStatus(newStatus);
         repo.save(doc);
-        Map<String, Object> changes = new LinkedHashMap<>();
+        snapshotVersion(doc);
         changes.put("status", pair(DocumentStatus.PENDING.name(), newStatus.name()));
-        changes.put("issuedDate", pair(null, str(today)));
-        saveLog(doc.getId(), "APPROVE", null, SecurityUtil.currentUserId(),
-                effectiveNow ? null : "Chờ hiệu lực từ " + doc.getEffectiveDate(), toJson(changes));
+        changes.put("issuedDate", pair(str(oldIssued), str(today)));
+        String comment = reissue ? "Tái ban hành phiên bản v" + doc.versionString()
+                : effectiveNow ? null : "Chờ hiệu lực từ " + doc.getEffectiveDate();
+        saveLog(doc.getId(), "APPROVE", null, SecurityUtil.currentUserId(), comment, toJson(changes));
         enqueue(doc, "APPROVED", "USER", null);
         return DocumentResponse.from(doc);
+    }
+
+    /** Chụp snapshot nội dung hiện tại của văn bản thành 1 phiên bản trong document_versions. */
+    private void snapshotVersion(Document doc) {
+        versionRepo.save(DocumentVersion.builder()
+                .documentId(doc.getId())
+                .versionMajor(doc.getVersionMajor())
+                .versionMinor(doc.getVersionMinor())
+                .title(doc.getTitle())
+                .description(doc.getDescription())
+                .type(doc.getType())
+                .level(doc.getLevel())
+                .filePath(doc.getFilePath())
+                .effectiveDate(doc.getEffectiveDate())
+                .expiryDate(doc.getExpiryDate())
+                .issuedDate(doc.getIssuedDate())
+                .createdBy(SecurityUtil.currentUserId())
+                .build());
+    }
+
+    /**
+     * Mở lại văn bản đã ban hành (ACTIVE/WARNING/EXPIRED) về DRAFT để sửa đổi rồi nộp duyệt lại.
+     * Không đụng version, không chụp snapshot — phiên bản trước đã được chụp ở lần approve trước.
+     */
+    @Transactional
+    public DocumentResponse reopen(Long id) {
+        Document doc = findOrThrow(id);
+        if (!canManage(doc))
+            throw new ForbiddenException("Không đủ quyền mở lại văn bản này");
+        DocumentStatus old = doc.getStatus();
+        if (old != DocumentStatus.ACTIVE && old != DocumentStatus.WARNING && old != DocumentStatus.EXPIRED)
+            throw new BusinessException("Chỉ mở lại được văn bản ACTIVE/WARNING/EXPIRED");
+        doc.setStatus(DocumentStatus.DRAFT);
+        repo.save(doc);
+        saveLog(doc.getId(), "REOPEN", SecurityUtil.currentUserId(), null,
+                "Mở lại để sửa đổi từ v" + doc.versionString(),
+                toJson(oneChange("status", old.name(), DocumentStatus.DRAFT.name())));
+        return DocumentResponse.from(doc, authClient.getName(doc.getOwnerId()));
+    }
+
+    /** Lịch sử phiên bản (snapshot mỗi lần ban hành) — mới nhất trước. */
+    @Transactional
+    public List<DocumentVersionDto> versions(Long id) {
+        Document doc = findOrThrow(id);
+        assertCanView(doc);
+        Map<Long, String> nameCache = new HashMap<>();
+        return versionRepo.findByDocumentIdOrderByVersionMajorDescVersionMinorDesc(id).stream()
+                .map(v -> DocumentVersionDto.from(v,
+                        v.getCreatedBy() == null ? null
+                                : nameCache.computeIfAbsent(v.getCreatedBy(), authClient::getName)))
+                .toList();
     }
 
     /**

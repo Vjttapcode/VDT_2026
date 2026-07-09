@@ -40,8 +40,26 @@ export interface DocumentDto {
   filePath: string | null;
   renewalCount: number;
   supersedesId: number | null;
+  version: string;                // phiên bản "1.0", "1.1"… — tăng minor mỗi lần tái ban hành
   createdAt: string;
   updatedAt: string;
+}
+
+/** Một phiên bản (snapshot) trong lịch sử ban hành của văn bản. */
+export interface DocVersion {
+  id: number;
+  version: string;                // "1.0", "1.1"…
+  title: string;
+  description: string | null;
+  type: DocType;
+  level: DocLevel;
+  filePath: string | null;
+  effectiveDate: string | null;
+  expiryDate: string;
+  issuedDate: string | null;      // ngày ban hành phiên bản này
+  createdBy: number | null;       // reviewer duyệt phiên bản này
+  createdByName: string | null;
+  createdAt: string;
 }
 
 export type RelationType = 'REPLACE' | 'REPEAL' | 'AMEND';
@@ -77,7 +95,7 @@ export const REL_DIRECTION_VN: Record<RelationType, Record<RelationDirection, st
 };
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'SUBMIT' | 'APPROVE' | 'REJECT' | 'RENEW' | 'REPLACE' | 'REPEAL' | 'AMEND'
-  | 'ADMIN_OVERRIDE' | 'EFFECTIVE' | 'SET_EFFECTIVE';
+  | 'ADMIN_OVERRIDE' | 'EFFECTIVE' | 'SET_EFFECTIVE' | 'REOPEN';
 
 /** Một dòng lịch sử thay đổi (audit log) của văn bản. */
 export interface AuditLog {
@@ -102,7 +120,8 @@ export const AUDIT_ACTION_VN: Record<AuditAction, string> = {
   AMEND: 'Sửa đổi/bổ sung',
   ADMIN_OVERRIDE: 'Can thiệp (Admin)',
   EFFECTIVE: 'Có hiệu lực',
-  SET_EFFECTIVE: 'Đổi ngày hiệu lực'
+  SET_EFFECTIVE: 'Đổi ngày hiệu lực',
+  REOPEN: 'Mở lại sửa đổi'
 };
 
 /** Màu chấm mốc thời gian theo loại hành động. */
@@ -118,7 +137,8 @@ export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
   AMEND: C.blue,
   ADMIN_OVERRIDE: C.amberDark,
   EFFECTIVE: C.green,
-  SET_EFFECTIVE: C.teal
+  SET_EFFECTIVE: C.teal,
+  REOPEN: C.amberDark
 };
 
 /** Nhãn tiếng Việt cho các trường trong diff changes. */
@@ -132,7 +152,8 @@ export const FIELD_VN: Record<string, string> = {
   expiryDate: 'Ngày hết hạn',
   issuedDate: 'Ngày ban hành',
   effectiveDate: 'Ngày hiệu lực',
-  supersedesId: 'Văn bản thay thế'
+  supersedesId: 'Văn bản thay thế',
+  version: 'Phiên bản'
 };
 
 export interface DashboardStats {

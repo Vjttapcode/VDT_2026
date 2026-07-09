@@ -3,7 +3,7 @@ import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { firstValueFrom, forkJoin, of } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 import {
-  AuditLog, DashboardStats, DEPT_VN, DocRelation, DocStatus, DocType, DocLevel, DocumentDto, DocView,
+  AuditLog, DashboardStats, DEPT_VN, DocRelation, DocStatus, DocType, DocLevel, DocumentDto, DocVersion, DocView,
   RelationType, daysFromToday, daysText, fmtDate, fmtIso, STATUS_THEME, toDate, TYPE_CODE, TYPE_THEME, TYPE_VN, LEVEL_VN
 } from './models';
 
@@ -36,6 +36,9 @@ export class DocumentStore {
 
   /* ===== quan hệ nghiệp vụ (thay thế/bãi bỏ/sửa đổi) của văn bản đang mở ===== */
   readonly relations = signal<DocRelation[]>([]);
+
+  /* ===== lịch sử phiên bản (snapshot mỗi lần ban hành) của văn bản đang mở ===== */
+  readonly versions = signal<DocVersion[]>([]);
 
   /* ===== ui state ===== */
   readonly query = signal('');
@@ -250,6 +253,25 @@ export class DocumentStore {
     });
   }
 
+  /** Tải lịch sử phiên bản (snapshot mỗi lần ban hành) của một văn bản. */
+  loadVersions(id: number): void {
+    this.http.get<DocVersion[]>(`${API}/${id}/versions`).subscribe({
+      next: v => this.versions.set(v),
+      error: () => this.versions.set([])
+    });
+  }
+
+  /** Mở lại văn bản đã ban hành về DRAFT để sửa đổi rồi nộp duyệt lại (tái ban hành). */
+  reopen(id: number): void {
+    this.http.post<DocumentDto>(`${API}/${id}/reopen`, {}).subscribe({
+      next: () => {
+        this.afterMutation(id, 'Đã mở lại văn bản — sửa đổi xong hãy Gửi duyệt để tái ban hành');
+        this.loadHistory(id);
+      },
+      error: err => this.toast('err', this.errText(err, 'Không mở lại được văn bản'))
+    });
+  }
+
   /** Tạo quan hệ: văn bản {id} {type} cho văn bản {targetId}. */
   relate(id: number, targetId: number, type: RelationType): void {
     const okText: Record<RelationType, string> = {
@@ -345,14 +367,14 @@ export class DocumentStore {
   /** Xuất danh sách văn bản đang lọc ra CSV (UTF-8 BOM để Excel đọc đúng tiếng Việt). */
   exportCsv(): void {
     const rows = this.filtered();
-    const headers = ['Mã', 'Tiêu đề', 'Loại', 'Cấp', 'Đơn vị', 'Người phụ trách', 'Ngày ban hành', 'Ngày hiệu lực', 'Ngày hết hạn', 'Trạng thái', 'Số lần gia hạn'];
+    const headers = ['Mã', 'Tiêu đề', 'Phiên bản', 'Loại', 'Cấp', 'Đơn vị', 'Người phụ trách', 'Ngày ban hành', 'Ngày hiệu lực', 'Ngày hết hạn', 'Trạng thái', 'Số lần gia hạn'];
     const esc = (v: unknown) => {
       const s = String(v ?? '');
       return /[",\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
     };
     const lines = [headers.join(',')];
     for (const d of rows) {
-      lines.push([d.code, d.title, d.typeVn, d.levelVn, d.deptName, d.ownerVn, d.issuedVn, d.effectiveVn, d.expiryVn, d.statusVn, d.renewalCount]
+      lines.push([d.code, d.title, 'v' + d.version, d.typeVn, d.levelVn, d.deptName, d.ownerVn, d.issuedVn, d.effectiveVn, d.expiryVn, d.statusVn, d.renewalCount]
         .map(esc).join(','));
     }
     const blob = new Blob(['﻿' + lines.join('\r\n')], { type: 'text/csv;charset=utf-8;' });

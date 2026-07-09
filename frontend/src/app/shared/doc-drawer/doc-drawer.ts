@@ -22,8 +22,8 @@ export class DocDrawer {
   private sanitizer = inject(DomSanitizer);
   private router = inject(Router);
 
-  /** popup xác nhận cho gia hạn / phê duyệt / từ chối — chỉ 1 mở tại 1 thời điểm */
-  readonly actionModal = signal<'approve' | 'reject' | 'renew' | null>(null);
+  /** popup xác nhận cho gia hạn / phê duyệt / từ chối / mở lại sửa đổi — chỉ 1 mở tại 1 thời điểm */
+  readonly actionModal = signal<'approve' | 'reject' | 'renew' | 'reopen' | null>(null);
   readonly rejectReason = signal('');
   readonly confirmingDelete = signal(false);
   renewDate = '';
@@ -60,9 +60,11 @@ export class DocDrawer {
       if (id != null) {
         this.store.loadHistory(id);
         this.store.loadRelations(id);
+        this.store.loadVersions(id);
       } else {
         this.store.history.set([]);
         this.store.relations.set([]);
+        this.store.versions.set([]);
       }
     });
   }
@@ -87,6 +89,8 @@ export class DocDrawer {
     const s = this.doc()?.dispStatus;
     return s === 'ACTIVE' || s === 'WARNING' || s === 'EXPIRED';
   });
+  /** mở lại văn bản đã ban hành để sửa đổi/tái ban hành — chủ sở hữu hoặc quản lý */
+  readonly canReopen = computed(() => this.canRenew() && (this.isOwner() || this.auth.isManager()));
   /** văn bản đã duyệt chờ hiệu lực: chủ sở hữu/quản lý được kích hoạt ngay hoặc dời ngày */
   readonly canSetEffective = computed(() =>
     this.doc()?.dispStatus === 'APPROVED' && (this.isOwner() || this.auth.isManager()));
@@ -204,6 +208,13 @@ export class DocDrawer {
     return this.actionColor[action as AuditAction] ?? '#9A95A2';
   }
 
+  /** dd/mm/yyyy cho ngày ISO (không kèm giờ) — dùng cho danh sách phiên bản. */
+  fmtDateOnly(iso: string): string {
+    const d = toDate(iso);
+    const p = (n: number) => String(n).padStart(2, '0');
+    return `${p(d.getDate())}/${p(d.getMonth() + 1)}/${d.getFullYear()}`;
+  }
+
   fmtDateTime(iso: string): string {
     const d = new Date(iso);
     const p = (n: number) => String(n).padStart(2, '0');
@@ -268,6 +279,18 @@ export class DocDrawer {
     const d = this.doc();
     if (!d || !this.renewDate || this.renewDate < this.minDate) return;
     this.store.renewTo(d.id, this.renewDate);
+    this.actionModal.set(null);
+  }
+
+  openReopen(): void {
+    this.actionModal.set('reopen');
+  }
+
+  /** mở lại về DRAFT — sửa xong nộp duyệt lại sẽ tái ban hành với phiên bản +0.1 */
+  confirmReopen(): void {
+    const d = this.doc();
+    if (!d) return;
+    this.store.reopen(d.id);
     this.actionModal.set(null);
   }
 

@@ -28,6 +28,7 @@ import com.vdt.document_service.dto.BulkResult;
 import com.vdt.document_service.dto.DashboardStatsDto;
 import com.vdt.document_service.dto.DocumentRequest;
 import com.vdt.document_service.dto.DocumentResponse;
+import com.vdt.document_service.dto.DocumentVersionDto;
 import com.vdt.document_service.dto.EffectiveDateRequest;
 import com.vdt.document_service.dto.RejectRequest;
 import com.vdt.document_service.dto.RelateRequest;
@@ -104,6 +105,16 @@ public class DocumentController {
     @GetMapping("/{id}/history")
     public List<AuditLogDto> history(@PathVariable Long id) {
         return service.history(id);
+    }
+
+    /** Mở lại văn bản đã ban hành về DRAFT để sửa đổi rồi nộp duyệt lại (tái ban hành). */
+    @PostMapping("/{id}/reopen")
+    public DocumentResponse reopen(@PathVariable Long id) { return service.reopen(id); }
+
+    /** Lịch sử phiên bản (snapshot mỗi lần ban hành) — mới nhất trước. */
+    @GetMapping("/{id}/versions")
+    public List<DocumentVersionDto> versions(@PathVariable Long id) {
+        return service.versions(id);
     }
 
     @PostMapping("/{id}/upload")

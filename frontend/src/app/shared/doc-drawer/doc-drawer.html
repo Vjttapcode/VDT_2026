@@ -6,6 +6,7 @@
       <div class="modal-head">
         <div>
           <span class="code mono">{{ d.code }}</span>
+          <span class="ver-badge mono">v{{ d.version }}</span>
           <div class="name">{{ d.title }}</div>
           <span class="status-pill" [style.background]="d.badgeBg" [style.color]="d.badgeColor">
             {{ d.statusVn }} · {{ d.daysVn }}
@@ -139,6 +140,34 @@
             }
           }
 
+          <!-- ===== lịch sử phiên bản (snapshot mỗi lần ban hành) ===== -->
+          <div class="versions-sec">
+            <div class="hist-head">
+              <span class="k">Phiên bản ban hành</span>
+            </div>
+            @if (store.versions().length === 0) {
+              <div class="hist-empty">Chưa có phiên bản — văn bản sẽ có phiên bản v{{ d.version }} sau khi được phê duyệt.</div>
+            } @else {
+              <div class="rel-list">
+                @for (v of store.versions(); track v.id) {
+                  <div class="rel-item">
+                    <span class="ver-pill mono" [class.current]="v.version === d.version">v{{ v.version }}</span>
+                    <span class="rel-doc">
+                      {{ v.title }}
+                      <span class="ver-meta">
+                        · Ban hành {{ v.issuedDate ? fmtDateOnly(v.issuedDate) : '—' }}
+                        @if (v.createdByName) { · duyệt bởi {{ v.createdByName }} }
+                      </span>
+                    </span>
+                    @if (v.filePath) {
+                      <a class="file-dl" [href]="fileUrl(v.filePath)" target="_blank">Tải tệp ↗</a>
+                    }
+                  </div>
+                }
+              </div>
+            }
+          </div>
+
           <!-- ===== lịch sử thay đổi (audit log) ===== -->
           <div class="history-sec">
             <div class="hist-head">
@@ -225,6 +254,9 @@
           <button class="btn-ghost" (click)="openEffective()">Đổi ngày hiệu lực…</button>
         } @else if (canRenew()) {
           <button class="btn-primary grow" (click)="openRenew()">Gia hạn…</button>
+          @if (canReopen()) {
+            <button class="btn-ghost" (click)="openReopen()">✎ Sửa đổi / Tái ban hành…</button>
+          }
           <button class="btn-ghost" (click)="close()">Đóng</button>
         } @else {
           <button class="btn-ghost grow" (click)="close()">Đóng</button>
@@ -259,6 +291,19 @@
               <button class="btn-ghost" (click)="closeActionModal()">Hủy</button>
               <button class="btn-primary confirm-danger" [disabled]="!rejectReason().trim()"
                       (click)="confirmReject()">Từ chối</button>
+            </div>
+          }
+          @case ('reopen') {
+            <div class="confirm-icon info">✎</div>
+            <div class="confirm-title">Mở lại để sửa đổi?</div>
+            <div class="confirm-desc">
+              <b>{{ d.code }} · {{ d.title }}</b> sẽ chuyển về trạng thái <b>Nháp</b> để sửa đổi.
+              Sau khi Gửi duyệt và được phê duyệt lại, văn bản tái ban hành với phiên bản mới
+              (v{{ d.version }} → tăng 0.1). Phiên bản hiện tại vẫn xem/tải được ở mục Phiên bản ban hành.
+            </div>
+            <div class="confirm-actions">
+              <button class="btn-ghost" (click)="closeActionModal()">Hủy</button>
+              <button class="btn-primary" (click)="confirmReopen()">Mở lại sửa đổi</button>
             </div>
           }
           @case ('renew') {
