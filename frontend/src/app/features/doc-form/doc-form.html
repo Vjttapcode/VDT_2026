@@ -1,6 +1,6 @@
 <a class="back-link" routerLink="/documents">← Quay lại danh sách văn bản</a>
 
-<div class="form-grid" [class.single]="editId != null">
+<div class="form-grid">
 
   <!-- ===== THÔNG TIN ===== -->
   <form class="card info-card" (ngSubmit)="save()">
@@ -101,8 +101,7 @@
     </div>
   </form>
 
-  <!-- ===== TỆP ĐÍNH KÈM + PREVIEW (chỉ khi tạo mới — sửa tệp qua màn hình chi tiết) ===== -->
-  @if (editId == null) {
+  <!-- ===== TỆP ĐÍNH KÈM + PREVIEW ===== -->
   <div class="card file-card">
     <div class="card-title">
       Tệp đính kèm
@@ -130,6 +129,19 @@
           </div>
         </div>
       }
+    } @else if (editId != null && existingFilePath) {
+      <div class="file-row">
+        <span class="file-icon"><span></span></span>
+        <div class="file-body">
+          <div class="file-name">{{ existingFileName() }}</div>
+          <div class="file-sub">Tệp hiện tại</div>
+        </div>
+        <a class="file-dl" [href]="existingFileUrl()" target="_blank">Tải ↗</a>
+      </div>
+      <label class="upload-zone replace">
+        <input type="file" hidden accept=".pdf,.doc,.docx" (change)="onFile($event)">
+        <div class="uz-text">Bấm để chọn tệp khác thay thế</div>
+      </label>
     } @else {
       <label class="upload-zone">
         <input type="file" hidden accept=".pdf,.doc,.docx" (change)="onFile($event)">
@@ -142,5 +154,4 @@
       </label>
     }
   </div>
-  }
 </div>

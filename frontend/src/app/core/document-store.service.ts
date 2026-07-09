@@ -259,6 +259,20 @@ export class DocumentStore {
     }
   }
 
+  /** Thay tệp đính kèm khi sửa văn bản (await được, dùng trong luồng lưu của form). */
+  async replaceFile(id: number, file: File): Promise<boolean> {
+    const form = new FormData();
+    form.append('file', file);
+    try {
+      await firstValueFrom(this.http.post<DocumentDto>(`${API}/${id}/upload`, form));
+      this.load();
+      return true;
+    } catch (err) {
+      this.toast('err', this.errText(err as HttpErrorResponse, 'Không cập nhật được tệp đính kèm'));
+      return false;
+    }
+  }
+
   submit(id: number): void { this.action(id, 'submit', 'Đã gửi duyệt'); }
   approve(id: number): void { this.action(id, 'approve', 'Đã phê duyệt văn bản'); }
 

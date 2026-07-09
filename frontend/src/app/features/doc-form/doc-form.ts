@@ -39,6 +39,9 @@ export class DocFormPage {
   targetCompanyId: number | null = null;
   targetDeptId: number | null = null;
 
+  /** Đường dẫn tệp hiện tại của văn bản đang sửa (để hiển thị + cho thay tệp khác). */
+  existingFilePath: string | null = null;
+
   readonly minDate = fmtIso(new Date(Date.now() + 86400000)); // backend validate @Future
   readonly saving = signal(false);
   readonly loadingDoc = signal(false);
@@ -126,6 +129,16 @@ export class DocFormPage {
     this.effectiveDate = doc.effectiveDate ?? '';
     this.targetCompanyId = doc.companyId ?? null;
     this.targetDeptId = doc.departmentId ?? null;
+    this.existingFilePath = doc.filePath ?? null;
+  }
+
+  /* ===== tệp hiện tại (khi sửa) ===== */
+  existingFileName(): string {
+    const p = this.existingFilePath;
+    return p ? (p.split(/[\\/]/).pop() ?? p) : '';
+  }
+  existingFileUrl(): string {
+    return this.existingFilePath ? `/uploads/${encodeURIComponent(this.existingFileName())}` : '';
   }
 
   /* ===== cấp áp dụng & đơn vị đích ===== */
@@ -206,8 +219,16 @@ export class DocFormPage {
         effectiveDate: this.effectiveDate || null,
         ...orgFields
       });
+      if (!ok) { this.saving.set(false); return; }
+      // nếu người dùng chọn tệp mới -> thay tệp đính kèm
+      const f = this.file();
+      if (f && !(await this.store.replaceFile(this.editId, f))) {
+        this.saving.set(false); // lỗi upload đã toast — giữ lại form để thử lại
+        return;
+      }
       this.saving.set(false);
-      if (ok) this.router.navigate(['/documents']);
+      this.setFile(null);
+      this.router.navigate(['/documents']);
       return;
     }
 

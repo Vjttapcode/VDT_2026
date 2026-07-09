@@ -469,7 +469,10 @@ public class DocumentService {
     @Transactional
     public DocumentResponse uploadFile(Long id, MultipartFile file) {
         Document doc = findOrThrow(id);
-        assertOwner(doc);
+        if(!canManage(doc))   // chủ sở hữu / admin / manager trong phạm vi tổ chức (giống update)
+            throw new ForbiddenException("Không đủ quyền sửa tệp văn bản này");
+        if(doc.getStatus() != DocumentStatus.DRAFT && doc.getStatus() != DocumentStatus.REJECTED)
+            throw new ForbiddenException("Chỉ thay tệp được khi văn bản ở trạng thái Nháp hoặc Bị từ chối");
         if(file == null || file.isEmpty() || !ALLOWED_TYPES.contains(file.getContentType()))
             throw new BusinessException("Chỉ chấp nhận file định dạng PDF hoặc WORD (.doc/.docx)");
         try {

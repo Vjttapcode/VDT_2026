@@ -67,6 +67,15 @@
     font-size: 13px; color: var(--ink-3); line-height: 1.6;
     span { font-size: 11.5px; color: var(--muted-2); }
   }
+  /* biến thể gọn khi đã có tệp — chỉ là nút "chọn tệp khác" */
+  &.replace { padding: 16px 20px; margin-top: 10px; }
+}
+
+/* link tải tệp hiện tại (trong luồng sửa) */
+.file-dl {
+  font-size: 11.5px; font-weight: 600; color: var(--blue); white-space: nowrap;
+  text-decoration: none; flex: none;
+  &:hover { text-decoration: underline; }
 }
 
 .file-row {
