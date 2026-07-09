@@ -34,7 +34,7 @@
 - Consumes: bảng `alert_queue` hiện có (V1), entity `AlertQueue` (Lombok `@Getter @Setter @Builder`).
 - Produces: `AlertQueue.getRetryCount(): int` / `setRetryCount(int)` — Task 3 dùng.
 
-- [ ] **Step 1: Viết migration V3**
+- [x] **Step 1: Viết migration V3**
 
 Tạo `notification-service/src/main/resources/db/migration/V3__alert_queue_retry_count.sql`:
 
@@ -48,7 +48,7 @@ Tạo `notification-service/src/main/resources/db/migration/V3__alert_queue_retr
 ALTER TABLE alert_queue ADD COLUMN retry_count INT NOT NULL DEFAULT 0;
 ```
 
-- [ ] **Step 2: Thêm field vào entity `AlertQueue`**
+- [x] **Step 2: Thêm field vào entity `AlertQueue`**
 
 Trong `AlertQueue.java`, ngay sau dòng `private String alertType;`, thêm:
 
@@ -56,12 +56,12 @@ Trong `AlertQueue.java`, ngay sau dòng `private String alertType;`, thêm:
     @Builder.Default @Column(name = "retry_count", nullable = false)  private int retryCount = 0;
 ```
 
-- [ ] **Step 3: Verify compile**
+- [x] **Step 3: Verify compile**
 
 Run (từ `notification-service/`): `./mvnw -q compile`
 Expected: BUILD SUCCESS, không lỗi.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add notification-service/src/main/resources/db/migration/V3__alert_queue_retry_count.sql notification-service/src/main/java/com/vdt/notification_service/entity/AlertQueue.java
@@ -80,7 +80,7 @@ git commit -m "feat(notification): thêm cột retry_count vào alert_queue"
 - Consumes: `JavaMailSender` (mock trong test).
 - Produces: constructor mới `EmailService(JavaMailSender, String from, String fromName, String redirectTo)` — Spring inject qua `@Value`; hai method public `sendExpiryAlert(...)`, `sendApproval(...)` giữ nguyên signature.
 
-- [ ] **Step 1: Viết test fail**
+- [x] **Step 1: Viết test fail**
 
 Tạo `notification-service/src/test/java/com/vdt/notification_service/service/EmailServiceTest.java`:
 
@@ -166,12 +166,12 @@ class EmailServiceTest {
 }
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận FAIL**
+- [x] **Step 2: Chạy test, xác nhận FAIL**
 
 Run: `./mvnw test -Dtest=EmailServiceTest`
 Expected: COMPILE ERROR — constructor `EmailService(JavaMailSender, String, String, String)` chưa tồn tại (hiện chỉ có 2 tham số).
 
-- [ ] **Step 3: Sửa `EmailService.java`**
+- [x] **Step 3: Sửa `EmailService.java`**
 
 Thay toàn bộ constructor và hàm `send(...)` (giữ nguyên `sendExpiryAlert`, `sendApproval`):
 
@@ -220,12 +220,12 @@ và:
 
 (`setFrom(String, String)` throws `UnsupportedEncodingException` nên catch thêm.)
 
-- [ ] **Step 4: Chạy test, xác nhận PASS**
+- [x] **Step 4: Chạy test, xác nhận PASS**
 
 Run: `./mvnw test -Dtest=EmailServiceTest`
 Expected: `Tests run: 4, Failures: 0, Errors: 0` — BUILD SUCCESS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add notification-service/src/main/java/com/vdt/notification_service/service/EmailService.java notification-service/src/test/java/com/vdt/notification_service/service/EmailServiceTest.java
@@ -244,7 +244,7 @@ git commit -m "feat(notification): display name sender + safe-mode redirect tron
 - Consumes: `AlertQueue.getRetryCount()/setRetryCount(int)` (Task 1); `EmailService.sendExpiryAlert(String, Long, String, long, String)` (mock).
 - Produces: constructor mới `AlertService(EmailService, AlertLogRepository, AlertQueueRepository, int maxRetries)` — Spring inject `@Value("${alert.max-retries:3}")`.
 
-- [ ] **Step 1: Viết test fail**
+- [x] **Step 1: Viết test fail**
 
 Tạo `notification-service/src/test/java/com/vdt/notification_service/service/AlertServiceTest.java`:
 
@@ -338,12 +338,12 @@ class AlertServiceTest {
 }
 ```
 
-- [ ] **Step 2: Chạy test, xác nhận FAIL**
+- [x] **Step 2: Chạy test, xác nhận FAIL**
 
 Run: `./mvnw test -Dtest=AlertServiceTest`
 Expected: COMPILE ERROR — constructor `AlertService(..., int)` chưa tồn tại.
 
-- [ ] **Step 3: Sửa `AlertService.java`**
+- [x] **Step 3: Sửa `AlertService.java`**
 
 Thêm import + logger + field `maxRetries`, sửa constructor và nhánh catch của `processAlert`:
 
@@ -391,12 +391,12 @@ Nhánh catch trong `processAlert` đổi thành:
 
 (Nhánh try/success và dedup đầu hàm giữ nguyên. Lưu ý: status khởi tạo đã là `PENDING` nên nhánh retry không cần `setStatus`.)
 
-- [ ] **Step 4: Chạy test, xác nhận PASS (cả 2 test class)**
+- [x] **Step 4: Chạy test, xác nhận PASS (cả 2 test class)**
 
 Run: `./mvnw test -Dtest='EmailServiceTest,AlertServiceTest'`
 Expected: `Tests run: 7, Failures: 0, Errors: 0` — BUILD SUCCESS.
 
-- [ ] **Step 5: Commit**
+- [x] **Step 5: Commit**
 
 ```bash
 git add notification-service/src/main/java/com/vdt/notification_service/service/AlertService.java notification-service/src/test/java/com/vdt/notification_service/service/AlertServiceTest.java
@@ -415,7 +415,7 @@ git commit -m "feat(notification): auto-retry gửi mail — giữ PENDING tối
 - Consumes: các `@Value` đã khai báo ở Task 2 (`alert.from-name`, `alert.redirect-to`) và Task 3 (`alert.max-retries`).
 - Produces: profile `prod` kích hoạt bằng `SPRING_PROFILES_ACTIVE=prod` — Task 5 dùng.
 
-- [ ] **Step 1: Sửa khối `alert:` trong `application.yaml`**
+- [x] **Step 1: Sửa khối `alert:` trong `application.yaml`**
 
 Thay:
 
@@ -434,7 +434,7 @@ alert:
   max-retries: ${ALERT_MAX_RETRIES:3}
 ```
 
-- [ ] **Step 2: Tạo `application-prod.yaml`**
+- [x] **Step 2: Tạo `application-prod.yaml`**
 
 Tạo `notification-service/src/main/resources/application-prod.yaml`:
 
@@ -465,12 +465,12 @@ alert:
   redirect-to: ${ALERT_REDIRECT_TO:}   # set khi demo (safe mode), rỗng khi chạy thật
 ```
 
-- [ ] **Step 3: Verify unit test vẫn xanh (yaml không phá context)**
+- [x] **Step 3: Verify unit test vẫn xanh (yaml không phá context)**
 
 Run: `./mvnw test -Dtest='EmailServiceTest,AlertServiceTest'`
 Expected: `Tests run: 7, Failures: 0` — BUILD SUCCESS.
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add notification-service/src/main/resources/application.yaml notification-service/src/main/resources/application-prod.yaml
@@ -489,7 +489,7 @@ git commit -m "feat(notification): profile prod cho Gmail SMTP + cấu hình ale
 - Consumes: profile `prod` (Task 4).
 - Produces: biến `.env`: `SMTP_USERNAME`, `SMTP_PASSWORD`, `ALERT_REDIRECT_TO`.
 
-- [ ] **Step 1: Sửa `docker-compose.prod.yml`**
+- [x] **Step 1: Sửa `docker-compose.prod.yml`**
 
 Thay khối:
 
@@ -513,7 +513,7 @@ bằng:
 
 (Compose merge map `environment` với file base — các biến `SPRING_MAIL_HOST/PORT` của base vẫn còn nhưng bị profile prod trong yaml đè, vô hại.)
 
-- [ ] **Step 2: Tạo `.env.example`**
+- [x] **Step 2: Tạo `.env.example`**
 
 Tạo `.env.example` ở repo root (chỉ placeholder, KHÔNG giá trị thật):
 
@@ -535,12 +535,12 @@ SMTP_PASSWORD=xxxx xxxx xxxx xxxx
 ALERT_REDIRECT_TO=your-test-inbox@gmail.com
 ```
 
-- [ ] **Step 3: Verify compose config hợp lệ**
+- [x] **Step 3: Verify compose config hợp lệ**
 
 Run (từ repo root): `docker compose -f docker-compose.yml -f docker-compose.prod.yml config --quiet && echo OK`
 Expected: `OK` (chỉ warning biến chưa set nếu `.env` thiếu biến SMTP — chấp nhận được).
 
-- [ ] **Step 4: Commit**
+- [x] **Step 4: Commit**
 
 ```bash
 git add docker-compose.prod.yml .env.example
@@ -553,26 +553,26 @@ git commit -m "feat(deploy): cấu hình Gmail SMTP cho notification-service ở
 
 **Files:** không sửa file — chỉ chạy kiểm chứng.
 
-- [ ] **Step 1: Chạy toàn bộ unit test mới**
+- [x] **Step 1: Chạy toàn bộ unit test mới**
 
 Run (từ `notification-service/`): `./mvnw test -Dtest='EmailServiceTest,AlertServiceTest'`
 Expected: `Tests run: 7, Failures: 0, Errors: 0`.
 
-- [ ] **Step 2: Build image + khởi động notification-service (dev, Mailhog)**
+- [x] **Step 2: Build image + khởi động notification-service (dev, Mailhog)**
 
 Run (từ repo root): `docker compose up -d --build notification-service`
 Expected: container start thành công.
 
-- [ ] **Step 3: Xác nhận Flyway áp migration V3 + app UP**
+- [x] **Step 3: Xác nhận Flyway áp migration V3 + app UP**
 
 Run: `docker compose logs notification-service | grep -iE "flyway|migrat|Started"`
 Expected: thấy `Migrating schema "notification_schema" to version "3 - alert queue retry count"` (hoặc `Successfully applied 1 migration`) và `Started NotificationServiceApplication`.
 
-- [ ] **Step 4: Smoke test gửi mail dev qua Mailhog**
+- [x] **Step 4: Smoke test gửi mail dev qua Mailhog**
 
 Login lấy JWT admin rồi gọi `POST /api/notifications/admin/test` (qua nginx `http://localhost/api/notifications/admin/test` hoặc port 8083). Mở Mailhog UI `http://localhost:8025` — thấy mail test với From hiển thị `VDT Hệ thống văn bản`.
 
-- [ ] **Step 5: Commit plan checkboxes + kết thúc**
+- [x] **Step 5: Commit plan checkboxes + kết thúc**
 
 ```bash
 git add docs/superpowers/plans/2026-07-09-real-email-alerts.md
