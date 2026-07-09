@@ -9,6 +9,12 @@ services:
     ports: !reset []
   notification-service:
     ports: !reset []
+    environment:
+      SPRING_PROFILES_ACTIVE: prod
+      SPRING_MAIL_USERNAME: ${SMTP_USERNAME}
+      SPRING_MAIL_PASSWORD: ${SMTP_PASSWORD}
+      ALERT_FROM: ${SMTP_USERNAME} # Gmail rewrite From về tài khoản auth
+      ALERT_REDIRECT_TO: ${ALERT_REDIRECT_TO:-} # set = email test khi demo, rỗng khi chạy thật
   scheduler-service:
     ports: !reset []
   mailhog:
