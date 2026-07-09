@@ -3,6 +3,9 @@ package com.vdt.notification_service.service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
 import com.vdt.notification_service.entity.AlertLog;
@@ -14,15 +17,19 @@ import jakarta.transaction.Transactional;
 
 @Service
 public class AlertService {
+    private static final Logger log = LoggerFactory.getLogger(AlertService.class);
     private final EmailService emailService;
     private final AlertLogRepository alertLogRepository;
     private final AlertQueueRepository alertQueueRepository;
+    private final int maxRetries;
 
     public AlertService(EmailService emailService, AlertLogRepository alertLogRepository,
-            AlertQueueRepository alertQueueRepository) {
+            AlertQueueRepository alertQueueRepository,
+            @Value("${alert.max-retries:3}") int maxRetries) {
         this.emailService = emailService;
         this.alertLogRepository = alertLogRepository;
         this.alertQueueRepository = alertQueueRepository;
+        this.maxRetries = maxRetries;
     }
 
     /** Gửi lại một cảnh báo đã FAILED: re-enqueue để processor gửi lại. */
@@ -62,8 +69,15 @@ public class AlertService {
             saveLog(q, "SENT", null);
             q.setStatus("PROCESSED");
         } catch (Exception e) {
-            saveLog(q, "FAILED", e.getMessage());
-            q.setStatus("FAILED");
+            if (q.getRetryCount() + 1 < maxRetries) {
+                // Lỗi tạm thời: giữ PENDING để processor 30s sau thử lại, không ghi log trung gian
+                q.setRetryCount(q.getRetryCount() + 1);
+                log.warn("Gửi mail cảnh báo doc #{} tới {} thất bại (lần thử {}), sẽ thử lại: {}",
+                        q.getDocumentId(), q.getRecipientEmail(), q.getRetryCount(), e.getMessage());
+            } else {
+                saveLog(q, "FAILED", e.getMessage());
+                q.setStatus("FAILED");
+            }
         }
         q.setProcessedAt(LocalDateTime.now());
     }
