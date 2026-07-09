@@ -32,6 +32,7 @@ public class AlertQueue {
     @Column(name = "company_id")                         private Long companyId;
     @Column(name = "days_left", nullable = false)        private int daysLeft;
     @Column(name = "alert_type", nullable = false)       private String alertType;
+    @Builder.Default @Column(name = "retry_count", nullable = false) private int retryCount = 0;
     @Builder.Default @Column(nullable = false)           private String status = "PENDING";
     @Column(name = "created_at", insertable = false, updatable = false) private LocalDateTime createdAt;
     @Column(name = "processed_at")                       private LocalDateTime processedAt;
