@@ -1,0 +1,24 @@
+# ============================================================
+# Profile prod: gửi email THẬT qua Gmail SMTP (App Password).
+# Kích hoạt: SPRING_PROFILES_ACTIVE=prod
+# 4 flag Gmail (host/port/auth/starttls) cố định thành khối nguyên tử
+# để không thể quên lẻ một flag. Secret đi qua env (.env, không commit).
+# Lưu ý: Gmail rewrite From = tài khoản đã auth -> ALERT_FROM phải là
+# chính địa chỉ Gmail đăng nhập.
+# ============================================================
+spring:
+  mail:
+    host: smtp.gmail.com
+    port: 587
+    username: ${SPRING_MAIL_USERNAME}
+    password: ${SPRING_MAIL_PASSWORD}
+    properties:
+      mail.smtp.auth: true
+      mail.smtp.starttls.enable: true
+      mail.smtp.connectiontimeout: 5000
+      mail.smtp.timeout: 5000
+      mail.smtp.writetimeout: 5000
+
+alert:
+  from: ${ALERT_FROM}
+  redirect-to: ${ALERT_REDIRECT_TO:}   # set khi demo (safe mode), rỗng khi chạy thật

@@ -44,6 +44,9 @@ auth:
     url: ${AUTH_SERVICE_URL:http://localhost:8081}
 alert:
   from: no-reply@vdt.local
+  from-name: ${ALERT_FROM_NAME:VDT Hệ thống văn bản}
+  redirect-to: ${ALERT_REDIRECT_TO:}     # rỗng ở dev (Mailhog nhận hết, không cần redirect)
+  max-retries: ${ALERT_MAX_RETRIES:3}
 
 logging:
   level:
