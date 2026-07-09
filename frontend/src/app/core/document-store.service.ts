@@ -206,7 +206,7 @@ export class DocumentStore {
 
   /** Tạo văn bản, kèm upload tệp và gửi duyệt tùy chọn — dùng cho trang /documents/new. */
   async createFull(
-    req: { title: string; description: string; type: DocType; level: DocLevel; expiryDate: string; effectiveDate: string | null },
+    req: { title: string; description: string; type: DocType; level: DocLevel; expiryDate: string; effectiveDate: string | null; departmentId: number | null; companyId: number | null },
     file: File | null,
     submitNow: boolean
   ): Promise<number | null> {
@@ -247,7 +247,7 @@ export class DocumentStore {
   /** Sửa văn bản DRAFT/REJECTED — trả về true nếu thành công. */
   async update(
     id: number,
-    req: { title: string; description: string; type: DocType; level: DocLevel; expiryDate: string; effectiveDate: string | null }
+    req: { title: string; description: string; type: DocType; level: DocLevel; expiryDate: string; effectiveDate: string | null; departmentId: number | null; companyId: number | null }
   ): Promise<boolean> {
     try {
       await firstValueFrom(this.http.put<DocumentDto>(`${API}/${id}`, req));

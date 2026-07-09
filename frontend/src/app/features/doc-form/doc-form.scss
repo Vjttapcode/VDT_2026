@@ -25,6 +25,17 @@
 
 .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
 
+/* đơn vị áp dụng */
+.scope-note {
+  font-size: 12.5px; color: var(--ink-3); line-height: 1.5;
+  background: #FAF8FA; border: 1px dashed var(--border-2, #E2DDE2); border-radius: 9px;
+  padding: 10px 12px;
+}
+.scope-picker { display: grid; grid-template-columns: 1fr 1fr; gap: 12px;
+  &:has(select:only-child) { grid-template-columns: 1fr; }
+}
+@media (max-width: 640px) { .scope-picker { grid-template-columns: 1fr; } }
+
 .submit-now-cell { display: flex; align-items: flex-end; padding-bottom: 11px; }
 .submit-now {
   display: flex; align-items: center; gap: 9px;

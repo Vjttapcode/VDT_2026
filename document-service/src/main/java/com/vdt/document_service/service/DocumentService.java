@@ -35,6 +35,7 @@ import com.vdt.document_service.dto.DocumentVersionDto;
 import com.vdt.document_service.dto.RelationDto;
 import com.vdt.document_service.entity.ApprovalRequest;
 import com.vdt.document_service.entity.Document;
+import com.vdt.document_service.entity.DocumentLevel;
 import com.vdt.document_service.entity.DocumentRelation;
 import com.vdt.document_service.entity.DocumentStatus;
 import com.vdt.document_service.entity.DocumentVersion;
@@ -114,6 +115,7 @@ public class DocumentService {
     public DocumentResponse create(DocumentRequest req) {
         assertEffectiveBeforeExpiry(req.effectiveDate(), req.expiryDate());
         Long userId = SecurityUtil.currentUserId();
+        OrgTarget target = resolveTarget(req.level(), req.departmentId(), req.companyId());
         Document doc = Document.builder()
                 .title(req.title())
                 .description(req.description())
@@ -121,8 +123,8 @@ public class DocumentService {
                 .level(req.level())
                 .status(DocumentStatus.DRAFT)
                 .ownerId(userId)
-                .departmentId(nullIfSentinel(SecurityUtil.currentDepartmentId()))
-                .companyId(nullIfSentinel(SecurityUtil.currentCompanyId()))
+                .departmentId(target.departmentId())
+                .companyId(target.companyId())
                 .expiryDate(req.expiryDate())
                 .effectiveDate(req.effectiveDate())
                 .renewalCount(0)
@@ -155,11 +157,19 @@ public class DocumentService {
             changes.put("expiryDate", pair(str(doc.getExpiryDate()), str(req.expiryDate())));
         if (!Objects.equals(doc.getEffectiveDate(), req.effectiveDate()))
             changes.put("effectiveDate", pair(str(doc.getEffectiveDate()), str(req.effectiveDate())));
+        // đổi cấp có thể đổi đơn vị đích -> suy lại theo cấp + phạm vi người sửa
+        OrgTarget target = resolveTarget(req.level(), req.departmentId(), req.companyId());
+        if (!Objects.equals(doc.getDepartmentId(), target.departmentId()))
+            changes.put("departmentId", pair(doc.getDepartmentId(), target.departmentId()));
+        if (!Objects.equals(doc.getCompanyId(), target.companyId()))
+            changes.put("companyId", pair(doc.getCompanyId(), target.companyId()));
 
         doc.setTitle(req.title());
         doc.setDescription(req.description());
         doc.setType(req.type());
         doc.setLevel(req.level());
+        doc.setDepartmentId(target.departmentId());
+        doc.setCompanyId(target.companyId());
         doc.setExpiryDate(req.expiryDate());
         doc.setEffectiveDate(req.effectiveDate());
         Document saved = repo.save(doc);
@@ -646,9 +656,11 @@ public class DocumentService {
     private void assertCanApprove(Document doc){
         if(doc.getStatus() != DocumentStatus.PENDING)
             throw new BusinessException("Chỉ duyệt/từ chối được văn bản trạng thái PENDING");
-        if(doc.getOwnerId().equals(SecurityUtil.currentUserId()))
-            throw new ForbiddenException("Không được tự duyệt văn bản của mình");
         String role = SecurityUtil.currentRole();
+        // ADMIN là cấp cao nhất -> được tự ban hành (nhất là văn bản cấp Tập đoàn chỉ ADMIN duyệt);
+        // các vai trò khác không được tự duyệt văn bản của mình.
+        if(doc.getOwnerId().equals(SecurityUtil.currentUserId()) && !"ADMIN".equals(role))
+            throw new ForbiddenException("Không được tự duyệt văn bản của mình");
         boolean ok = switch(doc.getLevel()){
             case CENTER  -> role.equals("ADMIN")
                     || (role.equals("MANAGER_COMPANY") && SecurityUtil.currentCompanyId().equals(doc.getCompanyId()))
@@ -751,4 +763,50 @@ public class DocumentService {
     }
 
     private Long nullIfSentinel(Long v) { return (v == null || v == -1L) ? null : v; }
+
+    /** Đơn vị đích của văn bản (một trong hai null tùy cấp). */
+    private record OrgTarget(Long departmentId, Long companyId) {}
+
+    /**
+     * Suy đơn vị đích của văn bản theo cấp áp dụng + phạm vi người tạo/sửa (từ JWT):
+     *   TẬP ĐOÀN : chỉ ADMIN — không thuộc đơn vị nào.
+     *   CÔNG TY  : ADMIN chọn công ty (reqCompanyId); MANAGER_COMPANY = công ty của mình.
+     *   TRUNG TÂM: ADMIN/MANAGER_COMPANY chọn trung tâm (reqDeptId), company suy từ trung tâm
+     *              (MANAGER_COMPANY: trung tâm phải thuộc công ty mình); USER/MANAGER_CENTER =
+     *              trung tâm của chính mình.
+     */
+    private OrgTarget resolveTarget(DocumentLevel level, Long reqDeptId, Long reqCompanyId) {
+        String role = SecurityUtil.currentRole();
+        Long ownDept = nullIfSentinel(SecurityUtil.currentDepartmentId());
+        Long ownCompany = nullIfSentinel(SecurityUtil.currentCompanyId());
+        return switch (level) {
+            case GROUP -> {
+                if (!"ADMIN".equals(role))
+                    throw new ForbiddenException("Chỉ Quản trị Tập đoàn được tạo văn bản cấp Tập đoàn");
+                yield new OrgTarget(null, null);
+            }
+            case COMPANY -> switch (role) {
+                case "ADMIN" -> {
+                    if (reqCompanyId == null) throw new BusinessException("Vui lòng chọn công ty áp dụng");
+                    yield new OrgTarget(null, reqCompanyId);
+                }
+                case "MANAGER_COMPANY" -> new OrgTarget(null, ownCompany);
+                default -> throw new ForbiddenException("Không đủ quyền tạo văn bản cấp Công ty");
+            };
+            case CENTER -> {
+                if ("ADMIN".equals(role) || "MANAGER_COMPANY".equals(role)) {
+                    if (reqDeptId == null) throw new BusinessException("Vui lòng chọn trung tâm áp dụng");
+                    Long deptCompany = authClient.getDepartmentCompany(reqDeptId);
+                    if (deptCompany == null) throw new BusinessException("Trung tâm áp dụng không tồn tại");
+                    if ("MANAGER_COMPANY".equals(role) && !deptCompany.equals(ownCompany))
+                        throw new ForbiddenException("Trung tâm không thuộc công ty của bạn");
+                    yield new OrgTarget(reqDeptId, deptCompany);
+                }
+                // USER / MANAGER_CENTER: văn bản thuộc trung tâm của chính mình
+                if (ownDept == null) throw new BusinessException("Tài khoản chưa được gán trung tâm");
+                Long company = ownCompany != null ? ownCompany : authClient.getDepartmentCompany(ownDept);
+                yield new OrgTarget(ownDept, company);
+            }
+        };
+    }
 }

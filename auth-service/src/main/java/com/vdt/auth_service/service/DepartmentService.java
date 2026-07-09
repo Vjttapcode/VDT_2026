@@ -31,6 +31,13 @@ public class DepartmentService {
                 .toList();
     }
 
+    /** Một trung tâm theo id (dùng cho internal call của document-service); null nếu không tồn tại. */
+    public DepartmentDto findOne(Long id) {
+        return deptRepo.findById(id)
+                .map(d -> new DepartmentDto(d.getId(), d.getName(), d.getCode(), d.getCompany().getId()))
+                .orElse(null);
+    }
+
     public DepartmentDto create(DepartmentDto dto) {
         Company company = companyRepo.findById(dto.companyId())
                 .orElseThrow(() -> new BusinessException("Công ty không tồn tại: " + dto.companyId()));
