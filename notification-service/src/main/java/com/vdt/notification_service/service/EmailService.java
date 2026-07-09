@@ -12,10 +12,17 @@ import jakarta.mail.internet.MimeMessage;
 public class EmailService {
     private final JavaMailSender mailSender;
     private final String from;
+    private final String fromName;
+    private final String redirectTo;
 
-    public EmailService(JavaMailSender mailSender, @Value("${alert.from:no-reply@vdt.local}") String from) {
+    public EmailService(JavaMailSender mailSender,
+            @Value("${alert.from:no-reply@vdt.local}") String from,
+            @Value("${alert.from-name:}") String fromName,
+            @Value("${alert.redirect-to:}") String redirectTo) {
         this.mailSender = mailSender;
         this.from = from;
+        this.fromName = fromName;
+        this.redirectTo = redirectTo;
     }
 
     //gửi mail cảnh báo
@@ -48,14 +55,20 @@ public class EmailService {
 
     private void send(String to, String subject, String html) {
         try {
+            // Safe mode: dồn mọi mail về 1 địa chỉ test, giữ recipient gốc trong subject
+            if (redirectTo != null && !redirectTo.isBlank()) {
+                subject = "[→ " + to + "] " + subject;
+                to = redirectTo;
+            }
             MimeMessage msg = mailSender.createMimeMessage();
             MimeMessageHelper h = new MimeMessageHelper(msg, true, "UTF-8");
-            h.setFrom(from);
+            if (fromName != null && !fromName.isBlank()) h.setFrom(from, fromName);
+            else h.setFrom(from);
             h.setTo(to);
             h.setSubject(subject);
             h.setText(html, true);
             mailSender.send(msg);
-        } catch(MessagingException e) {
+        } catch(MessagingException | java.io.UnsupportedEncodingException e) {
             throw new RuntimeException("Gửi mail thất bại tới " + to + ": " + e.getMessage(), e);
         }
     }
