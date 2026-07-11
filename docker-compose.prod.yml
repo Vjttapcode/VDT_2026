@@ -11,6 +11,12 @@ services:
     ports: !reset []
     environment:
       SPRING_PROFILES_ACTIVE: prod
+      # Base docker-compose.yml set cứng SPRING_MAIL_HOST/PORT=mailhog cho dev.
+      # Compose merge KHÔNG tự xoá key cũ, và biến môi trường OS luôn thắng
+      # application-prod.yaml -> phải ghi đè tường minh ở đây, nếu không app
+      # vẫn âm thầm nối Mailhog dù profile prod đã bật.
+      SPRING_MAIL_HOST: smtp.gmail.com
+      SPRING_MAIL_PORT: 587
       SPRING_MAIL_USERNAME: ${SMTP_USERNAME}
       SPRING_MAIL_PASSWORD: ${SMTP_PASSWORD}
       ALERT_FROM: ${SMTP_USERNAME} # Gmail rewrite From về tài khoản auth
