@@ -90,11 +90,16 @@ public class DocumentService {
     public List<DocumentResponse> list() {
         activateDueDocuments();   // tự chuyển APPROVED -> ACTIVE cho văn bản đã tới hạn, không chờ cron
         String role = SecurityUtil.currentRole();
-        // ADMIN/MANAGER_COMPANY/MANAGER_CENTER đều xem được TOÀN BỘ văn bản hệ thống (chỉ giới hạn ở
-        // sửa/duyệt/gia hạn theo phạm vi tổ chức, xem canManage()/assertCanApprove()); USER chỉ xem văn bản của mình.
+        // ADMIN xem toàn hệ thống; MANAGER_COMPANY xem trong công ty mình (loại văn bản cấp Tập đoàn);
+        // MANAGER_CENTER xem trong trung tâm mình (chỉ cấp Trung tâm); USER chỉ xem văn bản của mình.
+        // Lọc thêm theo level (không chỉ companyId/departmentId) để không phụ thuộc dữ liệu cũ.
         List<Document> docs = switch (role) {
-            case "ADMIN", "MANAGER_COMPANY", "MANAGER_CENTER" -> repo.findAll();
-            default -> repo.findByOwnerId(SecurityUtil.currentUserId()); // USER
+            case "ADMIN"           -> repo.findAll();
+            case "MANAGER_COMPANY" -> repo.findByCompanyId(SecurityUtil.currentCompanyId()).stream()
+                    .filter(d -> d.getLevel() != DocumentLevel.GROUP).toList();
+            case "MANAGER_CENTER"  -> repo.findByDepartmentId(SecurityUtil.currentDepartmentId()).stream()
+                    .filter(d -> d.getLevel() == DocumentLevel.CENTER).toList();
+            default                -> repo.findByOwnerId(SecurityUtil.currentUserId()); // USER
         };
         // cache tên theo ownerId để tra cứu/hiển thị người phụ trách, tránh gọi auth-service trùng
         Map<Long, String> nameCache = new HashMap<>();
@@ -511,8 +516,10 @@ public class DocumentService {
         String role = SecurityUtil.currentRole();
         List<Document> docs = switch (role) {                 // cùng switch với list()
             case "ADMIN"           -> repo.findAll();
-            case "MANAGER_COMPANY" -> repo.findByCompanyId(SecurityUtil.currentCompanyId());
-            case "MANAGER_CENTER"  -> repo.findByDepartmentId(SecurityUtil.currentDepartmentId());
+            case "MANAGER_COMPANY" -> repo.findByCompanyId(SecurityUtil.currentCompanyId()).stream()
+                    .filter(d -> d.getLevel() != DocumentLevel.GROUP).toList();
+            case "MANAGER_CENTER"  -> repo.findByDepartmentId(SecurityUtil.currentDepartmentId()).stream()
+                    .filter(d -> d.getLevel() == DocumentLevel.CENTER).toList();
             default                -> repo.findByOwnerId(SecurityUtil.currentUserId());   // USER
         };
 
@@ -646,11 +653,15 @@ public class DocumentService {
             throw new ForbiddenException("Bạn không phải chủ sở hữu văn bản này");
     }
 
-    /** ADMIN/MANAGER_COMPANY/MANAGER_CENTER xem được mọi văn bản; USER chỉ xem của mình. */
+    /** Cùng phạm vi với list(): ADMIN xem tất cả; MANAGER_* xem trong công ty/trung tâm mình; USER chỉ xem của mình. */
     private void assertCanView(Document doc) {
         String role = SecurityUtil.currentRole();
         boolean ok = switch (role) {
-            case "ADMIN", "MANAGER_COMPANY", "MANAGER_CENTER" -> true;
+            case "ADMIN" -> true;
+            case "MANAGER_COMPANY" -> doc.getLevel() != DocumentLevel.GROUP
+                    && SecurityUtil.currentCompanyId().equals(doc.getCompanyId());
+            case "MANAGER_CENTER"  -> doc.getLevel() == DocumentLevel.CENTER
+                    && SecurityUtil.currentDepartmentId().equals(doc.getDepartmentId());
             default -> SecurityUtil.currentUserId().equals(doc.getOwnerId());
         };
         if (!ok) throw new ForbiddenException("Không có quyền xem văn bản này");
