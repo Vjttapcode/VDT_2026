@@ -25,6 +25,7 @@ export class LoginPage {
 
   readonly demoAccounts = [
     { email: 'admin@vdt.com', label: 'Quản trị Tập đoàn' },
+    { email: 'manager.company@vdt.com', label: 'Trưởng Công ty VDT' },
     { email: 'manager.center@vdt.com', label: 'Trưởng TT Phần mềm' },
     { email: 'user1@vdt.com', label: 'Nhân viên TT Phần mềm' }
   ];
