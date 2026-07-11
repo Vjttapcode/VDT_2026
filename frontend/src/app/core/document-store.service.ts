@@ -6,6 +6,7 @@ import {
   AuditLog, DashboardStats, DEPT_VN, DocRelation, DocStatus, DocType, DocLevel, DocumentDto, DocVersion, DocView,
   RelationType, daysFromToday, daysText, fmtDate, fmtIso, STATUS_THEME, toDate, TYPE_CODE, TYPE_THEME, TYPE_VN, LEVEL_VN
 } from './models';
+import { OrgService } from './org.service';
 
 const API = '/api/documents';
 
@@ -13,6 +14,7 @@ export type StatusFilter = 'all' | 'ACTIVE' | 'WARNING' | 'EXPIRED' | 'PENDING' 
 export type SortKey = 'urgency' | 'name' | 'type';
 export type TypeFilter = DocType | 'all';
 export type DeptFilter = number | 'all';
+export type CompanyFilter = number | 'all';
 
 export interface Toast { id: number; kind: 'ok' | 'err'; text: string; }
 
@@ -22,6 +24,7 @@ export const ALERT_WINDOW = 30;
 @Injectable({ providedIn: 'root' })
 export class DocumentStore {
   private http = inject(HttpClient);
+  private org = inject(OrgService);
   private toastSeq = 0;
 
   /* ===== server state ===== */
@@ -50,7 +53,8 @@ export class DocumentStore {
 
   /* ===== bộ lọc nâng cao (tra cứu) ===== */
   readonly typeFilter = signal<TypeFilter>('all');       // loại văn bản
-  readonly deptFilter = signal<DeptFilter>('all');       // đơn vị ban hành
+  readonly companyFilter = signal<CompanyFilter>('all'); // công ty
+  readonly deptFilter = signal<DeptFilter>('all');       // đơn vị ban hành (trung tâm)
   readonly ownerQuery = signal('');                      // người phụ trách
   readonly expiryFrom = signal('');                      // hết hạn từ (yyyy-mm-dd)
   readonly expiryTo = signal('');                        // hết hạn đến (yyyy-mm-dd)
@@ -64,12 +68,20 @@ export class DocumentStore {
   readonly pageSize = signal(12);
 
   constructor() {
+    this.org.load(); // tên công ty/trung tâm thật cho hiển thị & bộ lọc (thay map tĩnh DEPT_VN)
+
     // đổi bộ lọc / sắp xếp → quay về trang 1 để không kẹt ở trang trống
     effect(() => {
       this.query(); this.statusFilter(); this.sortBy();
-      this.typeFilter(); this.deptFilter(); this.ownerQuery();
+      this.typeFilter(); this.companyFilter(); this.deptFilter(); this.ownerQuery();
       this.expiryFrom(); this.expiryTo(); this.pageSize();
       this.page.set(1);
+    });
+
+    // đổi công ty đang lọc -> bỏ chọn trung tâm cũ (có thể không còn thuộc công ty mới)
+    effect(() => {
+      this.companyFilter();
+      this.deptFilter.set('all');
     });
   }
 
@@ -80,6 +92,7 @@ export class DocumentStore {
     const q = this.query().trim().toLowerCase();
     const st = this.statusFilter();
     const tp = this.typeFilter();
+    const cp = this.companyFilter();
     const dp = this.deptFilter();
     const oq = this.ownerQuery().trim().toLowerCase();
     const from = this.expiryFrom();
@@ -89,7 +102,8 @@ export class DocumentStore {
       (!q || `${d.title} ${d.code} ${d.deptName} ${d.typeVn} ${d.levelVn} ${d.ownerVn} ${d.description ?? ''}`.toLowerCase().includes(q)) &&
       (st === 'all' || d.dispStatus === st || (st === 'PENDING' && (d.dispStatus === 'DRAFT' || d.dispStatus === 'REJECTED'))) &&
       (tp === 'all' || d.type === tp) &&                                   // loại văn bản
-      (dp === 'all' || d.departmentId === dp) &&                          // đơn vị ban hành
+      (cp === 'all' || d.companyId === cp) &&                             // công ty
+      (dp === 'all' || d.departmentId === dp) &&                          // đơn vị ban hành (trung tâm)
       (!oq || d.ownerVn.toLowerCase().includes(oq)) &&                    // người phụ trách
       (!from || d.expiryDate >= from) &&                                  // hết hạn từ (so sánh chuỗi ISO)
       (!to || d.expiryDate <= to);                                        // hết hạn đến
@@ -127,14 +141,31 @@ export class DocumentStore {
     return (['CONTRACT', 'LICENSE', 'CERTIFICATE', 'SR'] as DocType[]).filter(t => present.has(t));
   });
 
+  /** Tên trung tâm ưu tiên lấy từ OrgService (dữ liệu thật); DEPT_VN chỉ là fallback cũ. */
+  private deptName(id: number): string {
+    return this.org.departments().find(d => d.id === id)?.name ?? DEPT_VN[id] ?? `Phòng ban #${id}`;
+  }
+  private companyName(id: number): string {
+    return this.org.companies().find(c => c.id === id)?.name ?? `Công ty #${id}`;
+  }
+
+  /** Danh sách công ty đang xuất hiện trong dữ liệu đang xem — dùng cho dropdown lọc theo công ty. */
+  readonly companyOptions = computed<{ id: number; name: string }[]>(() => {
+    const ids = [...new Set(this.all().map(d => d.companyId).filter((x): x is number => x != null))];
+    return ids.map(id => ({ id, name: this.companyName(id) })).sort((a, b) => a.id - b.id);
+  });
+
+  /** Trung tâm — thu hẹp theo công ty đang lọc (nếu có chọn) để cascade đúng. */
   readonly deptOptions = computed<{ id: number; name: string }[]>(() => {
-    const ids = [...new Set(this.all().map(d => d.departmentId).filter((x): x is number => x != null))];
-    return ids.map(id => ({ id, name: DEPT_VN[id] ?? `Phòng ban #${id}` })).sort((a, b) => a.id - b.id);
+    const cp = this.companyFilter();
+    const source = cp === 'all' ? this.all() : this.all().filter(d => d.companyId === cp);
+    const ids = [...new Set(source.map(d => d.departmentId).filter((x): x is number => x != null))];
+    return ids.map(id => ({ id, name: this.deptName(id) })).sort((a, b) => a.id - b.id);
   });
 
   /** Có đang bật ít nhất một bộ lọc nâng cao không (để hiện nút Xóa lọc). */
   readonly hasAdvancedFilter = computed(() =>
-    this.typeFilter() !== 'all' || this.deptFilter() !== 'all' ||
+    this.typeFilter() !== 'all' || this.companyFilter() !== 'all' || this.deptFilter() !== 'all' ||
     !!this.ownerQuery().trim() || !!this.expiryFrom() || !!this.expiryTo());
 
   readonly selected = computed<DocView | null>(() => {
@@ -445,6 +476,7 @@ export class DocumentStore {
     this.query.set('');
     this.statusFilter.set('all');
     this.typeFilter.set('all');
+    this.companyFilter.set('all');
     this.deptFilter.set('all');
     this.ownerQuery.set('');
     this.expiryFrom.set('');
@@ -499,7 +531,9 @@ export class DocumentStore {
       code: `${String(d.id).padStart(2, '0')}/${TYPE_CODE[d.type]}-${created.getFullYear()}`,
       typeVn: TYPE_VN[d.type],
       levelVn: LEVEL_VN[d.level],
-      deptName: d.departmentId != null ? DEPT_VN[d.departmentId] ?? `Phòng ban #${d.departmentId}` : LEVEL_VN[d.level],
+      deptName: d.departmentId != null
+        ? this.deptName(d.departmentId)
+        : d.companyId != null ? this.companyName(d.companyId) : LEVEL_VN[d.level],
       ownerVn: d.ownerName?.trim() || `Người dùng #${d.ownerId}`,
       daysLeft,
       dispStatus,

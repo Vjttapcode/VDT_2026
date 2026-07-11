@@ -9,7 +9,7 @@
     <button class="chip sort" (click)="cycleSort()"
             title="Bấm để đổi thứ tự sắp xếp: Mức khẩn → Tên A-Z → Loại">Sắp xếp: {{ sortLabels[store.sortBy()] }}</button>
     <button class="chip filt" [class.on]="showFilters() || store.hasAdvancedFilter()" (click)="toggleFilters()"
-            title="Bộ lọc nâng cao: loại, đơn vị, người phụ trách, thời gian hết hạn">
+            title="Bộ lọc nâng cao: loại, công ty, trung tâm, người phụ trách, thời gian hết hạn">
       ⚑ Lọc nâng cao{{ store.hasAdvancedFilter() ? ' •' : '' }}
     </button>
     <button class="chip export" (click)="exportCsv()" title="Xuất danh sách đang lọc ra CSV (mở bằng Excel)">
@@ -44,10 +44,22 @@
         </select>
       </label>
 
+      @if (store.companyOptions().length > 1) {
+        <label class="fld">
+          <span class="fld-lb">Công ty</span>
+          <select (change)="setCompany($any($event.target).value)">
+            <option value="all" [selected]="store.companyFilter() === 'all'">Tất cả công ty</option>
+            @for (c of store.companyOptions(); track c.id) {
+              <option [value]="c.id" [selected]="store.companyFilter() === c.id">{{ c.name }}</option>
+            }
+          </select>
+        </label>
+      }
+
       <label class="fld">
-        <span class="fld-lb">Đơn vị ban hành</span>
+        <span class="fld-lb">Trung tâm</span>
         <select (change)="setDept($any($event.target).value)">
-          <option value="all" [selected]="store.deptFilter() === 'all'">Tất cả đơn vị</option>
+          <option value="all" [selected]="store.deptFilter() === 'all'">Tất cả trung tâm</option>
           @for (d of store.deptOptions(); track d.id) {
             <option [value]="d.id" [selected]="store.deptFilter() === d.id">{{ d.name }}</option>
           }

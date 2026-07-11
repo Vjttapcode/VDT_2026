@@ -74,5 +74,6 @@ export class DocumentsPage {
   toggleFilters(): void { this.showFilters.update(v => !v); }
 
   setType(v: string): void { this.store.typeFilter.set(v === 'all' ? 'all' : (v as DocType)); }
+  setCompany(v: string): void { this.store.companyFilter.set(v === 'all' ? 'all' : +v); }
   setDept(v: string): void { this.store.deptFilter.set(v === 'all' ? 'all' : +v); }
 }
