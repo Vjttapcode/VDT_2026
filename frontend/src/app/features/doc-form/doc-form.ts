@@ -63,13 +63,8 @@ export class DocFormPage {
   /** Nhân viên / Trưởng Trung tâm: thuộc đúng một trung tâm → khóa ở cấp Trung tâm. */
   readonly isCenterRole = computed(() => this.role() === 'USER' || this.role() === 'MANAGER_CENTER');
 
-  /** Cấp áp dụng được chọn theo vai trò. */
-  readonly levelOptions = computed<{ value: DocLevel; label: string }[]>(() => {
-    const all = (Object.keys(LEVEL_VN) as DocLevel[]).map(k => ({ value: k, label: LEVEL_VN[k] }));
-    if (this.isAdmin()) return all;                                   // Trung tâm / Công ty / Tập đoàn
-    if (this.isCompanyManager()) return all.filter(o => o.value !== 'GROUP'); // Trung tâm / Công ty
-    return all.filter(o => o.value === 'CENTER');                     // chỉ Trung tâm
-  });
+  /** Mọi vai trò đều tạo được văn bản ở mọi cấp — phân cấp chỉ áp cho bước duyệt. */
+  readonly levelOptions = (Object.keys(LEVEL_VN) as DocLevel[]).map(k => ({ value: k, label: LEVEL_VN[k] }));
 
   /** Tên trung tâm của chính người tạo (nếu tải được danh mục). */
   readonly ownDeptName = computed(() => {

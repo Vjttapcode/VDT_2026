@@ -24,7 +24,7 @@
       <div>
         <div class="field-label">Cấp áp dụng</div>
         <select class="field-input" name="level" [(ngModel)]="level" (ngModelChange)="onLevelChange()">
-          @for (l of levelOptions(); track l.value) {
+          @for (l of levelOptions; track l.value) {
             <option [ngValue]="l.value">{{ l.label }}</option>
           }
         </select>
@@ -36,10 +36,10 @@
       <div class="field-label">Đơn vị áp dụng</div>
       @if (level === 'GROUP') {
         <div class="scope-note">Toàn Tập đoàn — áp dụng cho tất cả công ty & trung tâm.</div>
-      } @else if (isCenterRole()) {
-        <div class="scope-note">Trung tâm của bạn{{ ownDeptName() ? ' — ' + ownDeptName() : '' }}</div>
-      } @else if (isCompanyManager() && level === 'COMPANY') {
+      } @else if (level === 'COMPANY' && !isAdmin()) {
         <div class="scope-note">Công ty của bạn — áp dụng toàn công ty.</div>
+      } @else if (level === 'CENTER' && isCenterRole()) {
+        <div class="scope-note">Trung tâm của bạn{{ ownDeptName() ? ' — ' + ownDeptName() : '' }}</div>
       } @else {
         <div class="scope-picker">
           @if (isAdmin()) {

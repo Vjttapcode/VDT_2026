@@ -6,6 +6,7 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.LocalDate;
 import java.time.temporal.ChronoUnit;
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
@@ -85,14 +86,16 @@ public class DocumentService {
         this.authClient = authClient;
     }
 
-    /** List filter theo role của người gọi. */
-    @Transactional
-    public List<DocumentResponse> list() {
-        activateDueDocuments();   // tự chuyển APPROVED -> ACTIVE cho văn bản đã tới hạn, không chờ cron
+    /**
+     * Văn bản trong phạm vi role của người gọi:
+     * ADMIN xem toàn hệ thống; MANAGER_COMPANY xem trong công ty mình (loại văn bản cấp Tập đoàn);
+     * MANAGER_CENTER xem trong trung tâm mình (chỉ cấp Trung tâm); USER chỉ xem văn bản của mình.
+     * Lọc thêm theo level (không chỉ companyId/departmentId) để không phụ thuộc dữ liệu cũ.
+     * MANAGER_* luôn thấy thêm văn bản do chính mình tạo — có thể ở cấp cao hơn phạm vi
+     * (mọi vai trò đều được tạo văn bản ở mọi cấp).
+     */
+    private List<Document> scopedDocs() {
         String role = SecurityUtil.currentRole();
-        // ADMIN xem toàn hệ thống; MANAGER_COMPANY xem trong công ty mình (loại văn bản cấp Tập đoàn);
-        // MANAGER_CENTER xem trong trung tâm mình (chỉ cấp Trung tâm); USER chỉ xem văn bản của mình.
-        // Lọc thêm theo level (không chỉ companyId/departmentId) để không phụ thuộc dữ liệu cũ.
         List<Document> docs = switch (role) {
             case "ADMIN"           -> repo.findAll();
             case "MANAGER_COMPANY" -> repo.findByCompanyId(SecurityUtil.currentCompanyId()).stream()
@@ -101,6 +104,22 @@ public class DocumentService {
                     .filter(d -> d.getLevel() == DocumentLevel.CENTER).toList();
             default                -> repo.findByOwnerId(SecurityUtil.currentUserId()); // USER
         };
+        if ("MANAGER_COMPANY".equals(role) || "MANAGER_CENTER".equals(role)) {
+            Set<Long> seen = docs.stream().map(Document::getId).collect(Collectors.toSet());
+            List<Document> merged = new ArrayList<>(docs);
+            repo.findByOwnerId(SecurityUtil.currentUserId()).stream()
+                    .filter(d -> !seen.contains(d.getId()))
+                    .forEach(merged::add);
+            return merged;
+        }
+        return docs;
+    }
+
+    /** List filter theo role của người gọi. */
+    @Transactional
+    public List<DocumentResponse> list() {
+        activateDueDocuments();   // tự chuyển APPROVED -> ACTIVE cho văn bản đã tới hạn, không chờ cron
+        List<Document> docs = scopedDocs();
         // cache tên theo ownerId để tra cứu/hiển thị người phụ trách, tránh gọi auth-service trùng
         Map<Long, String> nameCache = new HashMap<>();
         return docs.stream()
@@ -513,15 +532,7 @@ public class DocumentService {
     @Transactional
     public DashboardStatsDto dashboardStats() {
         activateDueDocuments();   // tự chuyển APPROVED -> ACTIVE cho văn bản đã tới hạn, không chờ cron
-        String role = SecurityUtil.currentRole();
-        List<Document> docs = switch (role) {                 // cùng switch với list()
-            case "ADMIN"           -> repo.findAll();
-            case "MANAGER_COMPANY" -> repo.findByCompanyId(SecurityUtil.currentCompanyId()).stream()
-                    .filter(d -> d.getLevel() != DocumentLevel.GROUP).toList();
-            case "MANAGER_CENTER"  -> repo.findByDepartmentId(SecurityUtil.currentDepartmentId()).stream()
-                    .filter(d -> d.getLevel() == DocumentLevel.CENTER).toList();
-            default                -> repo.findByOwnerId(SecurityUtil.currentUserId());   // USER
-        };
+        List<Document> docs = scopedDocs();                   // cùng phạm vi với list()
 
         // đếm theo trạng thái trong bộ đã lọc theo role
         Map<DocumentStatus, Long> byStatus = docs.stream()
@@ -653,16 +664,17 @@ public class DocumentService {
             throw new ForbiddenException("Bạn không phải chủ sở hữu văn bản này");
     }
 
-    /** Cùng phạm vi với list(): ADMIN xem tất cả; MANAGER_* xem trong công ty/trung tâm mình; USER chỉ xem của mình. */
+    /** Cùng phạm vi với scopedDocs(): ADMIN xem tất cả; MANAGER_* xem trong công ty/trung tâm mình + văn bản mình tạo; USER chỉ xem của mình. */
     private void assertCanView(Document doc) {
         String role = SecurityUtil.currentRole();
+        boolean isOwner = SecurityUtil.currentUserId().equals(doc.getOwnerId());
         boolean ok = switch (role) {
             case "ADMIN" -> true;
-            case "MANAGER_COMPANY" -> doc.getLevel() != DocumentLevel.GROUP
-                    && SecurityUtil.currentCompanyId().equals(doc.getCompanyId());
-            case "MANAGER_CENTER"  -> doc.getLevel() == DocumentLevel.CENTER
-                    && SecurityUtil.currentDepartmentId().equals(doc.getDepartmentId());
-            default -> SecurityUtil.currentUserId().equals(doc.getOwnerId());
+            case "MANAGER_COMPANY" -> isOwner || (doc.getLevel() != DocumentLevel.GROUP
+                    && SecurityUtil.currentCompanyId().equals(doc.getCompanyId()));
+            case "MANAGER_CENTER"  -> isOwner || (doc.getLevel() == DocumentLevel.CENTER
+                    && SecurityUtil.currentDepartmentId().equals(doc.getDepartmentId()));
+            default -> isOwner;
         };
         if (!ok) throw new ForbiddenException("Không có quyền xem văn bản này");
     }
@@ -782,9 +794,11 @@ public class DocumentService {
     private record OrgTarget(Long departmentId, Long companyId) {}
 
     /**
-     * Suy đơn vị đích của văn bản theo cấp áp dụng + phạm vi người tạo/sửa (từ JWT):
-     *   TẬP ĐOÀN : chỉ ADMIN — không thuộc đơn vị nào.
-     *   CÔNG TY  : ADMIN chọn công ty (reqCompanyId); MANAGER_COMPANY = công ty của mình.
+     * Suy đơn vị đích của văn bản theo cấp áp dụng + phạm vi người tạo/sửa (từ JWT).
+     * Mọi vai trò đều được TẠO văn bản ở mọi cấp; phân cấp chỉ áp cho DUYỆT (assertCanApprove):
+     *   TẬP ĐOÀN : không thuộc đơn vị nào.
+     *   CÔNG TY  : ADMIN chọn công ty (reqCompanyId); vai trò khác = công ty của mình
+     *              (suy từ trung tâm nếu JWT không mang companyId).
      *   TRUNG TÂM: ADMIN/MANAGER_COMPANY chọn trung tâm (reqDeptId), company suy từ trung tâm
      *              (MANAGER_COMPANY: trung tâm phải thuộc công ty mình); USER/MANAGER_CENTER =
      *              trung tâm của chính mình.
@@ -794,18 +808,20 @@ public class DocumentService {
         Long ownDept = nullIfSentinel(SecurityUtil.currentDepartmentId());
         Long ownCompany = nullIfSentinel(SecurityUtil.currentCompanyId());
         return switch (level) {
-            case GROUP -> {
-                if (!"ADMIN".equals(role))
-                    throw new ForbiddenException("Chỉ Quản trị Tập đoàn được tạo văn bản cấp Tập đoàn");
-                yield new OrgTarget(null, null);
-            }
+            case GROUP -> new OrgTarget(null, null);
             case COMPANY -> switch (role) {
                 case "ADMIN" -> {
                     if (reqCompanyId == null) throw new BusinessException("Vui lòng chọn công ty áp dụng");
                     yield new OrgTarget(null, reqCompanyId);
                 }
                 case "MANAGER_COMPANY" -> new OrgTarget(null, ownCompany);
-                default -> throw new ForbiddenException("Không đủ quyền tạo văn bản cấp Công ty");
+                default -> {
+                    // USER / MANAGER_CENTER: văn bản thuộc công ty của chính mình
+                    Long company = ownCompany != null ? ownCompany
+                            : ownDept != null ? authClient.getDepartmentCompany(ownDept) : null;
+                    if (company == null) throw new BusinessException("Tài khoản chưa được gán công ty/trung tâm");
+                    yield new OrgTarget(null, company);
+                }
             };
             case CENTER -> {
                 if ("ADMIN".equals(role) || "MANAGER_COMPANY".equals(role)) {
