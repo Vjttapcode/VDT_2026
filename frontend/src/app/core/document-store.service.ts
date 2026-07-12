@@ -364,14 +364,6 @@ export class DocumentStore {
     });
   }
 
-  /** Admin can thiệp văn bản: chỉ gửi các trường thay đổi. */
-  adminOverride(id: number, payload: Partial<{ status: DocStatus; expiryDate: string; ownerId: number; title: string; description: string }>): void {
-    this.http.patch<DocumentDto>(`${API}/${id}/admin`, payload).subscribe({
-      next: () => { this.afterMutation(id, 'Đã can thiệp văn bản (admin)'); this.loadHistory(id); },
-      error: err => this.toast('err', this.errText(err, 'Can thiệp thất bại'))
-    });
-  }
-
   /** Đổi ngày hiệu lực của văn bản APPROVED; đặt <= hôm nay = kích hoạt ngay. */
   setEffective(id: number, isoDate: string): void {
     this.http.patch<DocumentDto>(`${API}/${id}/effective-date`, { effectiveDate: isoDate }).subscribe({

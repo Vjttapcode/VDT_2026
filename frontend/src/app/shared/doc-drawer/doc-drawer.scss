@@ -98,17 +98,6 @@
   .grow { flex: 1; }
 }
 
-/* ===== can thiệp admin ===== */
-.admin-trigger {
-  align-self: flex-start; font-size: 11.5px; font-weight: 600; color: #C62B26;
-  background: #FCEFEF; border: 1px solid #F4CFCE; border-radius: 8px; padding: 7px 12px;
-  &:hover { background: #FBE3E2; }
-}
-.admin-box.action-box { border-color: #F4CFCE; background: #FDF6F5; }
-.admin-fields { display: flex; gap: 10px; flex-wrap: wrap;
-  .field-input { flex: 1; min-width: 130px; }
-}
-
 /* ===== quan hệ nghiệp vụ văn bản ===== */
 .relations-sec { display: flex; flex-direction: column; gap: 10px; }
 .rel-list { display: flex; flex-direction: column; gap: 7px; }

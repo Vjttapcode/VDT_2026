@@ -95,7 +95,7 @@ export const REL_DIRECTION_VN: Record<RelationType, Record<RelationDirection, st
 };
 
 export type AuditAction = 'CREATE' | 'UPDATE' | 'SUBMIT' | 'APPROVE' | 'REJECT' | 'RENEW' | 'REPLACE' | 'REPEAL' | 'AMEND'
-  | 'ADMIN_OVERRIDE' | 'EFFECTIVE' | 'SET_EFFECTIVE' | 'REOPEN';
+  | 'EFFECTIVE' | 'SET_EFFECTIVE' | 'REOPEN';
 
 /** Một dòng lịch sử thay đổi (audit log) của văn bản. */
 export interface AuditLog {
@@ -118,7 +118,6 @@ export const AUDIT_ACTION_VN: Record<AuditAction, string> = {
   REPLACE: 'Thay thế',
   REPEAL: 'Bãi bỏ',
   AMEND: 'Sửa đổi/bổ sung',
-  ADMIN_OVERRIDE: 'Can thiệp (Admin)',
   EFFECTIVE: 'Có hiệu lực',
   SET_EFFECTIVE: 'Đổi ngày hiệu lực',
   REOPEN: 'Mở lại sửa đổi'
@@ -135,7 +134,6 @@ export const AUDIT_ACTION_COLOR: Record<AuditAction, string> = {
   REPLACE: C.purple,
   REPEAL: C.redDark,
   AMEND: C.blue,
-  ADMIN_OVERRIDE: C.amberDark,
   EFFECTIVE: C.green,
   SET_EFFECTIVE: C.teal,
   REOPEN: C.amberDark

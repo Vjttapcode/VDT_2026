@@ -20,7 +20,6 @@ import java.util.ArrayList;
 import org.springframework.web.bind.annotation.PatchMapping;
 
 import com.vdt.document_service.dto.AdminAnalyticsDto;
-import com.vdt.document_service.dto.AdminOverrideRequest;
 import com.vdt.document_service.dto.AuditLogDto;
 import com.vdt.document_service.dto.BulkIdsRequest;
 import com.vdt.document_service.dto.BulkRenewRequest;
@@ -129,12 +128,6 @@ public class DocumentController {
     @GetMapping("/dashboard/stats")
     public DashboardStatsDto dashboardStats() {
         return service.dashboardStats();
-    }
-
-    /** Admin can thiệp một văn bản (sửa/đổi chủ sở hữu/ép trạng thái). */
-    @PatchMapping("/{id}/admin")
-    public DocumentResponse adminOverride(@PathVariable Long id, @RequestBody AdminOverrideRequest body) {
-        return service.adminOverride(id, body);
     }
 
     /** Số liệu phân tích toàn hệ thống (ADMIN). */
