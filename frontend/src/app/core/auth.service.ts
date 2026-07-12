@@ -14,6 +14,17 @@ export class AuthService {
 
   readonly user = signal<LoginResponse | null>(this.restore());
 
+  constructor() {
+    // localStorage dùng chung mọi tab: tab khác đăng nhập/đăng xuất sẽ ghi đè token,
+    // trong khi signal user của tab này vẫn là người cũ -> request mang danh tính mới
+    // nhưng UI hiện người cũ (vd nhân viên tạo văn bản nhưng audit ghi giám đốc).
+    // Sự kiện storage chỉ bắn ở các tab KHÁC tab vừa ghi -> reload để đồng bộ phiên.
+    window.addEventListener('storage', e => {
+      if (e.key !== TOKEN_KEY && e.key !== USER_KEY && e.key !== null) return;
+      if (this.restore()?.userId !== this.user()?.userId) location.reload();
+    });
+  }
+
   readonly initials = computed(() => {
     const name = this.user()?.fullName?.trim();
     if (!name) return '?';
